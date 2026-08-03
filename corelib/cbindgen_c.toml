@@ -1,0 +1,22 @@
+language = "C"
+include_guard = "YASS_CORELIB_H"
+
+[export]
+include = [
+    "TeamColor",
+    "Vector2",
+    "Vector3",
+    "VectorSE2",
+    "Robot",
+    "Ball",
+    "SimulationState",
+    "MotionCommand",
+    "MotionCommandFrame",
+    "KickCommand",
+    "DribblerCommand",
+    "RobotCommand"
+]
+prefix = "yass_"
+
+[enum]
+prefix_with_name = true

@@ -1,0 +1,11 @@
+[package]
+name = "yass-league-std-plugins"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+protobuf = "3.7.2"
+yass-corelib = { version = "0.1.0", path = "../corelib" }

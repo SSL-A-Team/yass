@@ -1,0 +1,9 @@
+[package]
+name = "yass-corelib"
+version = "0.1.0"
+edition = "2024"
+
+[build-dependencies]
+cbindgen = "0.29.4"
+
+[dependencies]

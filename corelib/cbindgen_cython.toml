@@ -1,0 +1,20 @@
+language = "Cython"
+
+[export]
+include = [
+    "TeamColor",
+    "Vector2",
+    "Vector3",
+    "VectorSE2",
+    "Robot",
+    "Ball",
+    "SimulationState",
+    "MotionCommand",
+    "MotionCommandFrame",
+    "KickCommand",
+    "DribblerCommand",
+    "RobotCommand"
+]
+
+[enum]
+prefix_with_name = true

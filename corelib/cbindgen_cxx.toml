@@ -1,0 +1,19 @@
+language = "CXX"
+include_guard = "YASS_CORELIB_HPP"
+namespace = "yass"
+
+[export]
+include = [
+    "TeamColor",
+    "Vector2",
+    "Vector3",
+    "VectorSE2",
+    "Robot",
+    "Ball",
+    "SimulationState",
+    "MotionCommand",
+    "MotionCommandFrame",
+    "KickCommand",
+    "DribblerCommand",
+    "RobotCommand"
+]

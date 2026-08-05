@@ -109,14 +109,6 @@ pub struct RobotCommand {
     pub dribbler_command: DribblerCommand,
 }
 
-impl RobotCommand {
-    pub fn default_with_id(id: u8) -> Self {
-        let mut c = Self::default();
-        c.id = id;
-        c
-    }
-}
-
 pub type FirmwareLoadCallback = unsafe extern "C" fn(color: TeamColor, config: *const c_char) -> *mut c_void;
 pub type FirmwareUnloadCallback = unsafe extern "C" fn(user_data: *mut c_void);
 pub type FirmwareFrameCallback = unsafe extern "C" fn(

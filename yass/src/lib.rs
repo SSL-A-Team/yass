@@ -6,7 +6,7 @@ pub mod plugin_manager;
 pub mod simulator;
 
 pub fn init_commands() -> [RobotCommand; 16] {
-    std::array::from_fn(|i| RobotCommand::default_with_id(i as u8))
+    std::array::from_fn(|i| RobotCommand { id: i as u8, ..Default::default() })
 }
 
 pub fn reset_commands(commands: &mut [RobotCommand; 16]) {

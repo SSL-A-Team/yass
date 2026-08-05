@@ -1,5 +1,4 @@
 use clap::Parser;
-use ctrlc;
 use std::error::Error;
 use std::path::PathBuf;
 use std::sync::Arc;

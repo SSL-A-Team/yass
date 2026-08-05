@@ -11,9 +11,11 @@ pub extern "C" fn yass_load_league_proto_firmware(
     _config: *const c_char,
 ) -> *mut c_void {
     unsafe {
-        let c_str = CStr::from_ptr(_config);
-        let owned_string = c_str.to_string_lossy().into_owned();
-        println!("{owned_string}");
+        if !_config.is_null() {
+            let c_str = CStr::from_ptr(_config);
+            let owned_string = c_str.to_string_lossy().into_owned();
+            println!("{owned_string}");
+        }
     }
     unsafe {
         let data = alloc(USER_DATA_LAYOUT) as *mut String;

@@ -14,12 +14,22 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     println!("Loading plugin from {lib_path}");
 
-    let plugin_library: Library;
-    let firmware_callback: Symbol<yass_corelib::FirmwareCallback>;
-    unsafe {
-        plugin_library = Library::new(lib_path)?;
-        firmware_callback = plugin_library.get(b"run_firmware_frame\0")?;
-    }
+    let plugin_library = unsafe {
+        Library::new(lib_path)?
+    };
+    let firmware_load_callback: Symbol<yass_corelib::FirmwareLoadCallback> = unsafe {
+        plugin_library.get(b"yass_load_firmware_plugin\0")?
+    };
+    let firmware_unload_callback: Symbol<yass_corelib::FirmwareUnloadCallback> = unsafe {
+        plugin_library.get(b"yass_unload_firmware_plugin\0")?
+    };
+    let firmware_callback: Symbol<yass_corelib::FirmwareFrameCallback> = unsafe {
+        plugin_library.get(b"yass_run_firmware_frame\0")?
+    };
+
+    let user_data = unsafe {
+        firmware_load_callback(yass_corelib::TeamColor::Blue)
+    };
 
     let state = yass_corelib::SimulationState {
         blue_robots: std::array::from_fn(|i| yass_corelib::Robot {
@@ -80,6 +90,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             },
         },
     };
+    let delta_t_us = 1000;
     let mut commands: [yass_corelib::RobotCommand; 16] = std::array::from_fn(|i| yass_corelib::RobotCommand {
         id: i as u8,
         motion_command: yass_corelib::MotionCommand::Off,
@@ -87,11 +98,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         kick_command: yass_corelib::KickCommand::Off,
         dribbler_command: yass_corelib::DribblerCommand::Off,
     });
+    
     unsafe {
-        firmware_callback(state, yass_corelib::TeamColor::Blue, 1000, &mut commands);
+        firmware_callback(state, delta_t_us, user_data, &mut commands);
     }
     if let yass_corelib::KickCommand::KickImmediate{speed} = commands[0].kick_command {
         println!("Received kick command with speed: {speed}");
+    }
+
+    unsafe {
+        firmware_unload_callback(user_data);
     }
 
     Ok(())

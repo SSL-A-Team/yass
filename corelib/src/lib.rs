@@ -1,16 +1,21 @@
+use std::ffi::c_void;
+
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub enum TeamColor {
     Blue,
     Yellow,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct Vector2 {
     pub x: f64,
     pub y: f64,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct Vector3 {
     pub x: f64,
     pub y: f64,
@@ -18,6 +23,7 @@ pub struct Vector3 {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct VectorSE2 {
     pub x: f64,
     pub y: f64,
@@ -25,6 +31,7 @@ pub struct VectorSE2 {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct Robot {
     pub id: u8,
     pub present: bool,
@@ -41,6 +48,7 @@ pub struct Robot {
 // }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct Ball {
     pub position: Vector3,
     pub velocity: Vector3,
@@ -48,6 +56,7 @@ pub struct Ball {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct SimulationState {
     pub blue_robots: [Robot; 16],
     pub yellow_robots: [Robot; 16],
@@ -98,11 +107,15 @@ pub struct RobotCommand {
     pub dribbler_command: DribblerCommand,
 }
 
-pub type FirmwareCallback = unsafe extern "C" fn(
+pub type FirmwareLoadCallback = unsafe extern "C" fn(color: TeamColor) -> *mut c_void;
+pub type FirmwareUnloadCallback = unsafe extern "C" fn(user_data: *mut c_void);
+pub type FirmwareFrameCallback = unsafe extern "C" fn(
     state: SimulationState,
-    color: TeamColor,
     delta_t_us: u64,
+    user_data: *mut c_void,
     commands_out: &mut [RobotCommand; 16],
 );
 
-pub type VisionCallback = unsafe extern "C" fn(state: SimulationState);
+pub type VisionLoadCallback = unsafe extern "C" fn() -> *mut c_void;
+pub type VisionUnloadCallback = unsafe extern "C" fn(user_data: *mut c_void);
+pub type VisionFrameCallback = unsafe extern "C" fn(state: SimulationState, user_data: *mut c_void);

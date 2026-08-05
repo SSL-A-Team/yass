@@ -2,6 +2,6 @@
 resolver = "3"
 members = [
     "corelib",
-    "league-std-plugins",
+    "standard-plugins",
     "yass"
 ]

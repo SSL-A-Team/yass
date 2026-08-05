@@ -1,0 +1,13 @@
+blue_team:
+  firmware:
+    lib: libyass_standard_plugins.so
+    name: league_proto_firmware
+    port: 10301
+yellow_team:
+  firmware:
+    lib: libyass_standard_plugins.so
+    name: league_proto_firmware
+    port: 10302
+vision_plugins:
+- lib: libyass_standard_plugins.so
+  name: league_proto_vision

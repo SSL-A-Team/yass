@@ -16,11 +16,6 @@ typedef enum yass_MotionCommandFrame {
   yass_MotionCommandFrame_Global,
 } yass_MotionCommandFrame;
 
-typedef struct yass_Vector2 {
-  double x;
-  double y;
-} yass_Vector2;
-
 typedef struct yass_Vector3 {
   double x;
   double y;

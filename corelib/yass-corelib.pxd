@@ -14,10 +14,6 @@ cdef extern from *:
     MotionCommandFrame_Local,
     MotionCommandFrame_Global,
 
-  cdef struct Vector2:
-    double x;
-    double y;
-
   cdef struct Vector3:
     double x;
     double y;

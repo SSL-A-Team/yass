@@ -52,7 +52,8 @@ typedef struct yass_SimulationState {
 typedef enum yass_MotionCommand_Tag {
   yass_MotionCommand_Off,
   yass_MotionCommand_Velocity,
-  yass_MotionCommand_Force,
+  yass_MotionCommand_Acceleration,
+  yass_MotionCommand_Wrench,
 } yass_MotionCommand_Tag;
 
 typedef struct yass_MotionCommand_yass_Velocity_Body {
@@ -61,17 +62,24 @@ typedef struct yass_MotionCommand_yass_Velocity_Body {
   double theta;
 } yass_MotionCommand_yass_Velocity_Body;
 
-typedef struct yass_MotionCommand_yass_Force_Body {
+typedef struct yass_MotionCommand_yass_Acceleration_Body {
   double x;
   double y;
   double theta;
-} yass_MotionCommand_yass_Force_Body;
+} yass_MotionCommand_yass_Acceleration_Body;
+
+typedef struct yass_MotionCommand_yass_Wrench_Body {
+  double x;
+  double y;
+  double theta;
+} yass_MotionCommand_yass_Wrench_Body;
 
 typedef struct yass_MotionCommand {
   yass_MotionCommand_Tag tag;
   union {
     yass_MotionCommand_yass_Velocity_Body velocity;
-    yass_MotionCommand_yass_Force_Body force;
+    yass_MotionCommand_yass_Acceleration_Body acceleration;
+    yass_MotionCommand_yass_Wrench_Body wrench;
   };
 } yass_MotionCommand;
 

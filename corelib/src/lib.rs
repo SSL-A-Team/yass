@@ -62,7 +62,8 @@ pub enum MotionCommand {
     #[default]
     Off,
     Velocity { x: f64, y: f64, theta: f64 },
-    Force { x: f64, y: f64, theta: f64 },
+    Acceleration { x: f64, y: f64, theta: f64},
+    Wrench { x: f64, y: f64, theta: f64 },
 }
 
 #[repr(C)]

@@ -45,14 +45,20 @@ cdef extern from *:
   cdef enum MotionCommand_Tag:
     MotionCommand_Off,
     MotionCommand_Velocity,
-    MotionCommand_Force,
+    MotionCommand_Acceleration,
+    MotionCommand_Wrench,
 
   cdef struct MotionCommand_Velocity_Body:
     double x;
     double y;
     double theta;
 
-  cdef struct MotionCommand_Force_Body:
+  cdef struct MotionCommand_Acceleration_Body:
+    double x;
+    double y;
+    double theta;
+
+  cdef struct MotionCommand_Wrench_Body:
     double x;
     double y;
     double theta;
@@ -60,7 +66,8 @@ cdef extern from *:
   cdef struct MotionCommand:
     MotionCommand_Tag tag;
     MotionCommand_Velocity_Body velocity;
-    MotionCommand_Force_Body force;
+    MotionCommand_Acceleration_Body acceleration;
+    MotionCommand_Wrench_Body wrench;
 
   cdef enum KickCommand_Tag:
     # Kicker does not fire

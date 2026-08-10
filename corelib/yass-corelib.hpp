@@ -56,7 +56,8 @@ struct MotionCommand {
   enum class Tag {
     Off,
     Velocity,
-    Force,
+    Acceleration,
+    Wrench,
   };
 
   struct Velocity_Body {
@@ -65,7 +66,13 @@ struct MotionCommand {
     double theta;
   };
 
-  struct Force_Body {
+  struct Acceleration_Body {
+    double x;
+    double y;
+    double theta;
+  };
+
+  struct Wrench_Body {
     double x;
     double y;
     double theta;
@@ -74,7 +81,8 @@ struct MotionCommand {
   Tag tag;
   union {
     Velocity_Body velocity;
-    Force_Body force;
+    Acceleration_Body acceleration;
+    Wrench_Body wrench;
   };
 };
 

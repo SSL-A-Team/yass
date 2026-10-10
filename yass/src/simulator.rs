@@ -21,63 +21,9 @@ impl Simulator {
 
     pub fn get_state(&self) -> yass_corelib::SimulationState {
         yass_corelib::SimulationState {
-            blue_robots: std::array::from_fn(|i| yass_corelib::Robot {
-                id: i as u8,
-                present: false,
-                pose: yass_corelib::VectorSE2 {
-                    x: 0.0,
-                    y: 0.0,
-                    theta: 0.0,
-                },
-                velocity: yass_corelib::VectorSE2 {
-                    x: 0.0,
-                    y: 0.0,
-                    theta: 0.0,
-                },
-                acceleration: yass_corelib::VectorSE2 {
-                    x: 0.0,
-                    y: 0.0,
-                    theta: 0.0,
-                },
-                ball_sense: false,
-            }),
-            yellow_robots: std::array::from_fn(|i| yass_corelib::Robot {
-                id: i as u8,
-                present: false,
-                pose: yass_corelib::VectorSE2 {
-                    x: 0.0,
-                    y: 0.0,
-                    theta: 0.0,
-                },
-                velocity: yass_corelib::VectorSE2 {
-                    x: 0.0,
-                    y: 0.0,
-                    theta: 0.0,
-                },
-                acceleration: yass_corelib::VectorSE2 {
-                    x: 0.0,
-                    y: 0.0,
-                    theta: 0.0,
-                },
-                ball_sense: false,
-            }),
-            ball: yass_corelib::Ball {
-                position: yass_corelib::Vector3 {
-                    x: 0.0,
-                    y: 0.0,
-                    z: 0.0,
-                },
-                velocity: yass_corelib::Vector3 {
-                    x: 0.0,
-                    y: 0.0,
-                    z: 0.0,
-                },
-                acceleration: yass_corelib::Vector3 {
-                    x: 0.0,
-                    y: 0.0,
-                    z: 0.0,
-                },
-            },
+            blue_robots: std::array::from_fn(|i| self.physics.get_blue_bot_state(i as u8)),
+            yellow_robots: std::array::from_fn(|i| self.physics.get_yellow_bot_state(i as u8)),
+            ball: self.physics.get_ball_state(),
         }
     }
 

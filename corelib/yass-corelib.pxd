@@ -15,14 +15,14 @@ cdef extern from *:
     MotionCommandFrame_Global,
 
   cdef struct Vector3:
-    double x;
-    double y;
-    double z;
+    float x;
+    float y;
+    float z;
 
   cdef struct VectorSE2:
-    double x;
-    double y;
-    double theta;
+    float x;
+    float y;
+    float theta;
 
   cdef struct Robot:
     uint8_t id;
@@ -49,19 +49,19 @@ cdef extern from *:
     MotionCommand_Wrench,
 
   cdef struct MotionCommand_Velocity_Body:
-    double x;
-    double y;
-    double theta;
+    float x;
+    float y;
+    float theta;
 
   cdef struct MotionCommand_Acceleration_Body:
-    double x;
-    double y;
-    double theta;
+    float x;
+    float y;
+    float theta;
 
   cdef struct MotionCommand_Wrench_Body:
-    double x;
-    double y;
-    double theta;
+    float x;
+    float y;
+    float theta;
 
   cdef struct MotionCommand:
     MotionCommand_Tag tag;
@@ -78,10 +78,10 @@ cdef extern from *:
     KickCommand_KickOnTouch,
 
   cdef struct KickCommand_KickImmediate_Body:
-    double speed;
+    float speed;
 
   cdef struct KickCommand_KickOnTouch_Body:
-    double speed;
+    float speed;
 
   cdef struct KickCommand:
     KickCommand_Tag tag;
@@ -99,10 +99,10 @@ cdef extern from *:
     DribblerCommand_Force,
 
   cdef struct DribblerCommand_Rotation_Body:
-    double speed;
+    float speed;
 
   cdef struct DribblerCommand_Force_Body:
-    double force;
+    float force;
 
   cdef struct DribblerCommand:
     DribblerCommand_Tag tag;

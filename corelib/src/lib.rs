@@ -10,17 +10,17 @@ pub enum TeamColor {
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct Vector3 {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct VectorSE2 {
-    pub x: f64,
-    pub y: f64,
-    pub theta: f64,
+    pub x: f32,
+    pub y: f32,
+    pub theta: f32,
 }
 
 #[repr(C)]
@@ -61,9 +61,9 @@ pub struct SimulationState {
 pub enum MotionCommand {
     #[default]
     Off,
-    Velocity { x: f64, y: f64, theta: f64 },
-    Acceleration { x: f64, y: f64, theta: f64},
-    Wrench { x: f64, y: f64, theta: f64 },
+    Velocity { x: f32, y: f32, theta: f32 },
+    Acceleration { x: f32, y: f32, theta: f32},
+    Wrench { x: f32, y: f32, theta: f32 },
 }
 
 #[repr(C)]
@@ -81,9 +81,9 @@ pub enum KickCommand {
     #[default]
     Off,
     /// Kicker fires immediately at the given speed, in m/s
-    KickImmediate { speed: f64 },
+    KickImmediate { speed: f32 },
     /// Kicker fires if the ball is touching the front of the robot, in m/s
-    KickOnTouch { speed: f64 },
+    KickOnTouch { speed: f32 },
 }
 
 #[repr(C)]
@@ -95,9 +95,9 @@ pub enum DribblerCommand {
     /// Ball will glue to the front of the robot
     Sticky,
     /// Ball will spin towards the robot, in rad/s
-    Rotation { speed: f64 },
+    Rotation { speed: f32 },
     /// Ball will be pulled towards the front of the robot with the given force, in N
-    Force { force: f64 },
+    Force { force: f32 },
 }
 
 #[repr(C)]

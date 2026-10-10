@@ -17,15 +17,15 @@ typedef enum yass_MotionCommandFrame {
 } yass_MotionCommandFrame;
 
 typedef struct yass_Vector3 {
-  double x;
-  double y;
-  double z;
+  float x;
+  float y;
+  float z;
 } yass_Vector3;
 
 typedef struct yass_VectorSE2 {
-  double x;
-  double y;
-  double theta;
+  float x;
+  float y;
+  float theta;
 } yass_VectorSE2;
 
 typedef struct yass_Robot {
@@ -57,21 +57,21 @@ typedef enum yass_MotionCommand_Tag {
 } yass_MotionCommand_Tag;
 
 typedef struct yass_MotionCommand_yass_Velocity_Body {
-  double x;
-  double y;
-  double theta;
+  float x;
+  float y;
+  float theta;
 } yass_MotionCommand_yass_Velocity_Body;
 
 typedef struct yass_MotionCommand_yass_Acceleration_Body {
-  double x;
-  double y;
-  double theta;
+  float x;
+  float y;
+  float theta;
 } yass_MotionCommand_yass_Acceleration_Body;
 
 typedef struct yass_MotionCommand_yass_Wrench_Body {
-  double x;
-  double y;
-  double theta;
+  float x;
+  float y;
+  float theta;
 } yass_MotionCommand_yass_Wrench_Body;
 
 typedef struct yass_MotionCommand {
@@ -99,11 +99,11 @@ typedef enum yass_KickCommand_Tag {
 } yass_KickCommand_Tag;
 
 typedef struct yass_KickCommand_yass_KickImmediate_Body {
-  double speed;
+  float speed;
 } yass_KickCommand_yass_KickImmediate_Body;
 
 typedef struct yass_KickCommand_yass_KickOnTouch_Body {
-  double speed;
+  float speed;
 } yass_KickCommand_yass_KickOnTouch_Body;
 
 typedef struct yass_KickCommand {
@@ -134,11 +134,11 @@ typedef enum yass_DribblerCommand_Tag {
 } yass_DribblerCommand_Tag;
 
 typedef struct yass_DribblerCommand_yass_Rotation_Body {
-  double speed;
+  float speed;
 } yass_DribblerCommand_yass_Rotation_Body;
 
 typedef struct yass_DribblerCommand_yass_Force_Body {
-  double force;
+  float force;
 } yass_DribblerCommand_yass_Force_Body;
 
 typedef struct yass_DribblerCommand {

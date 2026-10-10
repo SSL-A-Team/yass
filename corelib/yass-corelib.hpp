@@ -20,15 +20,15 @@ enum class MotionCommandFrame {
 };
 
 struct Vector3 {
-  double x;
-  double y;
-  double z;
+  float x;
+  float y;
+  float z;
 };
 
 struct VectorSE2 {
-  double x;
-  double y;
-  double theta;
+  float x;
+  float y;
+  float theta;
 };
 
 struct Robot {
@@ -61,21 +61,21 @@ struct MotionCommand {
   };
 
   struct Velocity_Body {
-    double x;
-    double y;
-    double theta;
+    float x;
+    float y;
+    float theta;
   };
 
   struct Acceleration_Body {
-    double x;
-    double y;
-    double theta;
+    float x;
+    float y;
+    float theta;
   };
 
   struct Wrench_Body {
-    double x;
-    double y;
-    double theta;
+    float x;
+    float y;
+    float theta;
   };
 
   Tag tag;
@@ -97,11 +97,11 @@ struct KickCommand {
   };
 
   struct KickImmediate_Body {
-    double speed;
+    float speed;
   };
 
   struct KickOnTouch_Body {
-    double speed;
+    float speed;
   };
 
   Tag tag;
@@ -124,11 +124,11 @@ struct DribblerCommand {
   };
 
   struct Rotation_Body {
-    double speed;
+    float speed;
   };
 
   struct Force_Body {
-    double force;
+    float force;
   };
 
   Tag tag;

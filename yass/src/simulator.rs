@@ -1,4 +1,4 @@
-use crate::physics_engine::PhsyicsEngine;
+use crate::physics::engine::PhsyicsEngine;
 use crate::plugin_manager::PluginManager;
 use yass_corelib::*;
 

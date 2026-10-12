@@ -1,6 +1,8 @@
 use rapier3d::prelude::*;
 use yass_corelib::{Ball, Robot, Vector3, VectorSE2};
 
+use crate::physics::mesh;
+
 pub struct PhsyicsEngine {
     phys_world: PhysicsWorld,
     ball_handle: RigidBodyHandle,
@@ -184,7 +186,7 @@ impl PhsyicsEngine {
         // TODO add flat front to robots
         let (bot_handle, _) = world.insert(
             RigidBodyBuilder::dynamic().translation(position),
-            ColliderBuilder::cylinder(0.09, 0.09),
+            ColliderBuilder::new(mesh::generate_robot_mesh().expect("Failed to generate robot physics mesh")),
         );
         bot_handle
     }

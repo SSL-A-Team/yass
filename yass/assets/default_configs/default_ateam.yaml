@@ -9,8 +9,3 @@ yellow_team:
 vision_plugins:
 - lib: libyass_standard_plugins.so
   name: league_proto_vision
-field:
-  length: 9.0
-  width: 6.0
-  boundary_width: 0.3
-  goal_width: 1.0

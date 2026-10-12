@@ -1,11 +1,6 @@
 use rapier3d::prelude::*;
 
-pub fn generate_robot_mesh() -> Option<SharedShape> {
-    // TODO: pull dimensions from config
-    let radius = 0.09;
-    let height = 0.180;
-    let mouth_width = 0.08;
-
+pub fn generate_robot_mesh(radius: f32, height: f32, mouth_width: f32) -> Option<SharedShape> {
     let mut vertices = vec![];
     generate_robot_footprint_vertices(&mut vertices, radius, mouth_width, 0.0);
     generate_robot_footprint_vertices(&mut vertices, radius, mouth_width, height);

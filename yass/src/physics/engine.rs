@@ -1,41 +1,42 @@
 use rapier3d::prelude::*;
 use yass_corelib::{Ball, Robot, Vector3, VectorSE2};
 
-use crate::physics::mesh;
+use crate::{
+    config::{Config, FieldConfig, RobotConfig},
+    physics::{constants, mesh},
+};
 
 pub struct PhsyicsEngine {
     phys_world: PhysicsWorld,
     ball_handle: RigidBodyHandle,
-    yellow_robot_handles: [RigidBodyHandle; 16],
-    blue_robot_handles: [RigidBodyHandle; 16],
+    yellow_robot_handles: Vec<RigidBodyHandle>,
+    blue_robot_handles: Vec<RigidBodyHandle>,
 }
 
 impl PhsyicsEngine {
-    pub fn new() -> Self {
+    pub fn new(config: &Config) -> Self {
         let mut phys_world = PhysicsWorld::new();
-        phys_world.gravity = Vector::new(0.0, 0.0, -9.81);
-        Self::add_field(&mut phys_world);
+        phys_world.gravity = Vec3::Z * -9.81;
+        Self::add_field(&mut phys_world, &config.field);
         let ball_handle = Self::add_ball(&mut phys_world);
-        let yellow_robot_handles = std::array::from_fn(|i| {
-            Self::add_robot(
-                &mut phys_world,
-                Vec3 {
-                    x: -1.0,
-                    y: i as f32 * 0.18,
-                    z: 0.0,
-                },
-            )
-        });
-        let blue_robot_handles = std::array::from_fn(|i| {
-            Self::add_robot(
-                &mut phys_world,
-                Vec3 {
-                    x: 1.0,
-                    y: i as f32 * 0.18,
-                    z: 0.0,
-                },
-            )
-        });
+        let yellow_robot_handles = (0..config.yellow_team.robot_count)
+            .map(|i| {
+                Self::add_robot(
+                    &mut phys_world,
+                    &config.yellow_team.robot_props,
+                    Vec3::new(-1.0, i as f32 * 0.18, 0.0),
+                )
+            })
+            .collect();
+        let blue_robot_handles = (0..config.blue_team.robot_count)
+            .map(|i| {
+                Self::add_robot(
+                    &mut phys_world,
+                    &config.blue_team.robot_props,
+                    Vec3::new(-1.0, i as f32 * 0.18, 0.0),
+                )
+            })
+            .collect();
         Self {
             phys_world,
             ball_handle,
@@ -48,13 +49,12 @@ impl PhsyicsEngine {
         self.phys_world.step();
     }
 
-    fn add_field(world: &mut PhysicsWorld) {
-        // TODO use config sizes
-        let field_length = 9.0;
-        let field_width = 6.0;
-        let boundary_width = 0.3;
-        let goal_width = 1.0;
-        let goal_depth = 0.16;
+    fn add_field(world: &mut PhysicsWorld, config: &FieldConfig) {
+        let field_length = config.length;
+        let field_width = config.width;
+        let boundary_width = config.boundary_width;
+        let goal_width = config.goal_width;
+        let goal_depth = config.goal_depth;
 
         let wall_height = 0.16;
         let wall_thickness = 0.02;
@@ -63,7 +63,7 @@ impl PhsyicsEngine {
         // Ground
         world.insert_collider(
             ColliderBuilder::cuboid(world_length, world_width, 0.1)
-                .translation(Vec3::new(0.0, 0.0, -0.05)),
+                .translation(Vec3::Z * -0.05),
             None,
         );
         // Long walls
@@ -134,10 +134,10 @@ impl PhsyicsEngine {
                 Vec3::new(
                     (field_length / 2.0) + goal_depth + (wall_thickness / 2.0),
                     0.0,
-                    wall_height / 2.0
+                    wall_height / 2.0,
                 ),
             ),
-            None
+            None,
         );
         // Negative Goal
         world.insert_collider(
@@ -165,28 +165,53 @@ impl PhsyicsEngine {
                 Vec3::new(
                     -((field_length / 2.0) + goal_depth + (wall_thickness / 2.0)),
                     0.0,
-                    wall_height / 2.0
+                    wall_height / 2.0,
                 ),
             ),
-            None
+            None,
         );
     }
 
     fn add_ball(world: &mut PhysicsWorld) -> RigidBodyHandle {
         let (ball_handle, _) = world.insert(
             RigidBodyBuilder::dynamic(),
-            ColliderBuilder::ball(0.00213)
-                .mass(0.04593)
-                .restitution(0.65),
+            ColliderBuilder::ball(constants::BALL_RADIUS)
+                .mass(constants::BALL_MASS)
+                .restitution(constants::BALL_RESTITUTION),
         );
         ball_handle
     }
 
-    fn add_robot(world: &mut PhysicsWorld, position: Vec3) -> RigidBodyHandle {
-        // TODO add flat front to robots
+    fn add_robot(
+        world: &mut PhysicsWorld,
+        robot_config: &RobotConfig,
+        position: Vec3,
+    ) -> RigidBodyHandle {
+        // TODO constrain robots to SE2 motion
         let (bot_handle, _) = world.insert(
             RigidBodyBuilder::dynamic().translation(position),
-            ColliderBuilder::new(mesh::generate_robot_mesh().expect("Failed to generate robot physics mesh")),
+            ColliderBuilder::new(
+                mesh::generate_robot_mesh(
+                    robot_config.radius,
+                    robot_config.height,
+                    robot_config.mouth_width,
+                )
+                .expect("Failed to generate robot physics mesh"),
+            ).mass(robot_config.mass),
+        );
+        let robot_radius = robot_config.radius;
+        let mouth_width = robot_config.mouth_width;
+        let ball_sense_height = 1.1 * constants::BALL_RADIUS * 2.0;
+        world.insert_collider(
+            ColliderBuilder::cuboid(0.001, mouth_width, ball_sense_height)
+                .sensor(true)
+                .translation(Vec3::new(
+                    robot_radius * f32::cos(f32::asin((mouth_width / 2.0) / robot_radius)),
+                    0.0,
+                    ball_sense_height / 2.0,
+                ))
+                .translation(position),
+            Some(bot_handle),
         );
         bot_handle
     }
@@ -241,15 +266,51 @@ impl PhsyicsEngine {
                 y: 0.0,
                 theta: 0.0,
             },
-            ball_sense: false,
+            ball_sense: self.get_ball_sense(&bot_body),
         }
     }
 
+    fn get_ball_sense(&self, robot_body: &RigidBody) -> bool {
+        let ball_body = &self.phys_world.bodies[self.ball_handle];
+        let ball_collider = ball_body.colliders()[0];
+        for &collider_handle in robot_body.colliders() {
+            let collider = &self.phys_world.colliders[collider_handle];
+            if collider.is_sensor() {
+                return self
+                    .phys_world
+                    .narrow_phase
+                    .intersection_pair(collider_handle, ball_collider)
+                    .unwrap_or(false);
+            }
+        }
+        false
+    }
+
     pub fn get_yellow_bot_state(&self, id: u8) -> Robot {
+        if id as usize >= self.yellow_robot_handles.len() {
+            return Robot {
+                pose: VectorSE2{ x: 0.0, y: 0.0, theta: 0.0},
+                id,
+                present: false,
+                velocity: VectorSE2{ x: 0.0, y: 0.0, theta: 0.0},
+                acceleration: VectorSE2 { x: 0.0, y: 0.0, theta: 0.0 },
+                ball_sense: false,
+            };
+        }
         self.get_bot_state(id, self.yellow_robot_handles[id as usize])
     }
 
     pub fn get_blue_bot_state(&self, id: u8) -> Robot {
+        if id as usize >= self.blue_robot_handles.len() {
+            return Robot {
+                pose: VectorSE2{ x: 0.0, y: 0.0, theta: 0.0},
+                id,
+                present: false,
+                velocity: VectorSE2{ x: 0.0, y: 0.0, theta: 0.0},
+                acceleration: VectorSE2 { x: 0.0, y: 0.0, theta: 0.0 },
+                ball_sense: false,
+            };
+        }
         self.get_bot_state(id, self.blue_robot_handles[id as usize])
     }
 }

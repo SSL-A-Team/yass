@@ -1,3 +1,4 @@
+use crate::config::Config;
 use crate::physics::engine::PhsyicsEngine;
 use crate::plugin_manager::PluginManager;
 use yass_corelib::*;
@@ -5,13 +6,15 @@ use yass_corelib::*;
 pub struct Simulator {
     pub plugins: PluginManager,
     physics: PhsyicsEngine,
+    config: Config,
 }
 
 impl Simulator {
-    pub fn new() -> Self {
+    pub fn new(config: &Config) -> Self {
         Self {
             plugins: PluginManager::new(),
-            physics: PhsyicsEngine::new(),
+            physics: PhsyicsEngine::new(&config),
+            config: config.clone()
         }
     }
 

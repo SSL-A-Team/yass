@@ -17,12 +17,12 @@ struct Args {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut simulator = Simulator::new();
-
     let args = Args::parse();
 
     let config_file_contents = std::fs::read_to_string(args.config)?;
     let config: Config = serde_yaml::from_str(&config_file_contents)?;
+
+    let mut simulator = Simulator::new(&config);
 
     if let Some(blue_firmware) = config.blue_team.firmware.as_ref() {
         simulator.plugins.load_firmware_plugin(

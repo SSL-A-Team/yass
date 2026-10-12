@@ -16,7 +16,16 @@ pub struct TeamConfig {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+pub struct FieldConfig {
+    pub length: f32,
+    pub width: f32,
+    pub boundary_width: f32,
+    pub goal_width: f32
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
+    pub field: FieldConfig,
     pub blue_team: TeamConfig,
     pub yellow_team: TeamConfig,
     pub vision_plugins: Vec<PluginConfig>,

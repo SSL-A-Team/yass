@@ -1,16 +1,25 @@
+use schemars::{JsonSchema, Schema, SchemaGenerator, json_schema};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 pub struct PluginConfig {
     pub lib: String,
     pub name: String,
 
     #[serde(flatten)]
+    #[schemars(schema_with="flatten_arbitrary_yaml_schema")]
     pub extra_keys: HashMap<String, serde_yaml::Value>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+fn flatten_arbitrary_yaml_schema(_gen: &mut SchemaGenerator) -> Schema {
+    json_schema!({
+        "description": "Defines a plugin. Additional properties will be passed through to the plugin.",
+        "additionalProperties": true,
+    })
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(default)]
 pub struct RobotConfig {
     pub radius: f32,
@@ -30,7 +39,7 @@ impl Default for RobotConfig {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 pub struct TeamConfig {
     pub firmware: Option<PluginConfig>,
     #[serde(default)]
@@ -43,7 +52,7 @@ fn default_robot_count() -> u8 {
     6
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(default)]
 pub struct FieldConfig {
     pub length: f32,
@@ -65,7 +74,7 @@ impl Default for FieldConfig {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 pub struct Config {
     #[serde(default)]
     pub field: FieldConfig,

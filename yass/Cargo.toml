@@ -9,6 +9,7 @@ ctrlc = "3.5.2"
 libloading = "0.9.0"
 rapier3d = "0.34.0"
 rust-yaml = "1.1.0"
+schemars = "1.2.2"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_yaml = "0.9.34"
 yass-corelib = { version = "0.1.0", path = "../corelib" }

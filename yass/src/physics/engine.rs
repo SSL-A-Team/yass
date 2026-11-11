@@ -62,8 +62,7 @@ impl PhsyicsEngine {
         let world_width = field_width + (2.0 * boundary_width) + (2.0 * wall_thickness);
         // Ground
         world.insert_collider(
-            ColliderBuilder::cuboid(world_length, world_width, 0.1)
-                .translation(Vec3::Z * -0.05),
+            ColliderBuilder::cuboid(world_length, world_width, 0.1).translation(Vec3::Z * -0.05),
             None,
         );
         // Long walls
@@ -187,9 +186,11 @@ impl PhsyicsEngine {
         robot_config: &RobotConfig,
         position: Vec3,
     ) -> RigidBodyHandle {
-        // TODO constrain robots to SE2 motion
         let (bot_handle, _) = world.insert(
-            RigidBodyBuilder::dynamic().translation(position),
+            RigidBodyBuilder::dynamic()
+                .translation(position)
+                .enabled_translations(true, true, false)
+                .enabled_rotations(false, false, true),
             ColliderBuilder::new(
                 mesh::generate_robot_mesh(
                     robot_config.radius,
@@ -197,7 +198,8 @@ impl PhsyicsEngine {
                     robot_config.mouth_width,
                 )
                 .expect("Failed to generate robot physics mesh"),
-            ).mass(robot_config.mass),
+            )
+            .mass(robot_config.mass),
         );
         let robot_radius = robot_config.radius;
         let mouth_width = robot_config.mouth_width;
@@ -289,11 +291,23 @@ impl PhsyicsEngine {
     pub fn get_yellow_bot_state(&self, id: u8) -> Robot {
         if id as usize >= self.yellow_robot_handles.len() {
             return Robot {
-                pose: VectorSE2{ x: 0.0, y: 0.0, theta: 0.0},
+                pose: VectorSE2 {
+                    x: 0.0,
+                    y: 0.0,
+                    theta: 0.0,
+                },
                 id,
                 present: false,
-                velocity: VectorSE2{ x: 0.0, y: 0.0, theta: 0.0},
-                acceleration: VectorSE2 { x: 0.0, y: 0.0, theta: 0.0 },
+                velocity: VectorSE2 {
+                    x: 0.0,
+                    y: 0.0,
+                    theta: 0.0,
+                },
+                acceleration: VectorSE2 {
+                    x: 0.0,
+                    y: 0.0,
+                    theta: 0.0,
+                },
                 ball_sense: false,
             };
         }
@@ -303,11 +317,23 @@ impl PhsyicsEngine {
     pub fn get_blue_bot_state(&self, id: u8) -> Robot {
         if id as usize >= self.blue_robot_handles.len() {
             return Robot {
-                pose: VectorSE2{ x: 0.0, y: 0.0, theta: 0.0},
+                pose: VectorSE2 {
+                    x: 0.0,
+                    y: 0.0,
+                    theta: 0.0,
+                },
                 id,
                 present: false,
-                velocity: VectorSE2{ x: 0.0, y: 0.0, theta: 0.0},
-                acceleration: VectorSE2 { x: 0.0, y: 0.0, theta: 0.0 },
+                velocity: VectorSE2 {
+                    x: 0.0,
+                    y: 0.0,
+                    theta: 0.0,
+                },
+                acceleration: VectorSE2 {
+                    x: 0.0,
+                    y: 0.0,
+                    theta: 0.0,
+                },
                 ball_sense: false,
             };
         }

@@ -1,5 +1,7 @@
 use rapier3d::prelude::*;
-use yass_corelib::{Ball, Robot, Vector3, VectorSE2};
+use yass_corelib::{
+    Ball, DribblerCommand, KickCommand, MotionCommandFrame, Robot, TeamColor, Vector3, VectorSE2,
+};
 
 use crate::{
     config::{Config, FieldConfig, RobotConfig},
@@ -11,6 +13,8 @@ pub struct PhsyicsEngine {
     ball_handle: RigidBodyHandle,
     yellow_robot_handles: Vec<RigidBodyHandle>,
     blue_robot_handles: Vec<RigidBodyHandle>,
+    yellow_robot_dribbler_fixed_joint_handles: Vec<Option<ImpulseJointHandle>>,
+    blue_robot_dribbler_fixed_joint_handles: Vec<Option<ImpulseJointHandle>>,
 }
 
 impl PhsyicsEngine {
@@ -42,6 +46,8 @@ impl PhsyicsEngine {
             ball_handle,
             yellow_robot_handles,
             blue_robot_handles,
+            yellow_robot_dribbler_fixed_joint_handles: vec![None; config.yellow_team.robot_count as usize],
+            blue_robot_dribbler_fixed_joint_handles: vec![None; config.blue_team.robot_count as usize],
         }
     }
 
@@ -242,7 +248,18 @@ impl PhsyicsEngine {
         }
     }
 
-    fn get_bot_state(&self, id: u8, handle: RigidBodyHandle) -> Robot {
+    fn get_bot_handle(&self, color: TeamColor, id: u8) -> Option<RigidBodyHandle> {
+        let handles = match color {
+            TeamColor::Blue => &self.blue_robot_handles,
+            TeamColor::Yellow => &self.yellow_robot_handles,
+        };
+        if id as usize >= handles.len() {
+            return None;
+        }
+        Some(handles[id as usize])
+    }
+
+    fn get_bot_state_internal(&self, id: u8, handle: RigidBodyHandle) -> Robot {
         let bot_body = &self.phys_world.bodies[handle];
         let translation = &bot_body.translation();
         let rotation = &bot_body.rotation();
@@ -288,55 +305,163 @@ impl PhsyicsEngine {
         false
     }
 
-    pub fn get_yellow_bot_state(&self, id: u8) -> Robot {
-        if id as usize >= self.yellow_robot_handles.len() {
-            return Robot {
-                pose: VectorSE2 {
-                    x: 0.0,
-                    y: 0.0,
-                    theta: 0.0,
-                },
-                id,
-                present: false,
-                velocity: VectorSE2 {
-                    x: 0.0,
-                    y: 0.0,
-                    theta: 0.0,
-                },
-                acceleration: VectorSE2 {
-                    x: 0.0,
-                    y: 0.0,
-                    theta: 0.0,
-                },
-                ball_sense: false,
-            };
-        }
-        self.get_bot_state(id, self.yellow_robot_handles[id as usize])
+    pub fn get_bot_state(&self, color: yass_corelib::TeamColor, id: u8) -> Robot {
+        let Some(handle) = self.get_bot_handle(color, id) else {
+            let mut robot = Robot::default();
+            robot.id = id;
+            robot.present = false;
+            return robot;
+        };
+        self.get_bot_state_internal(id, handle)
     }
 
-    pub fn get_blue_bot_state(&self, id: u8) -> Robot {
-        if id as usize >= self.blue_robot_handles.len() {
-            return Robot {
-                pose: VectorSE2 {
-                    x: 0.0,
-                    y: 0.0,
-                    theta: 0.0,
-                },
-                id,
-                present: false,
-                velocity: VectorSE2 {
-                    x: 0.0,
-                    y: 0.0,
-                    theta: 0.0,
-                },
-                acceleration: VectorSE2 {
-                    x: 0.0,
-                    y: 0.0,
-                    theta: 0.0,
-                },
-                ball_sense: false,
-            };
+    pub fn set_bot_velocity(
+        &mut self,
+        color: TeamColor,
+        id: u8,
+        velocity: VectorSE2,
+        frame: MotionCommandFrame,
+    ) {
+        let Some(handle) = self.get_bot_handle(color, id) else {
+            return;
+        };
+        let bot_body = &mut self.phys_world.bodies[handle];
+        let world_vel = match frame {
+            MotionCommandFrame::Global => Vector::new(velocity.x, velocity.y, 0.0),
+            MotionCommandFrame::Local => {
+                bot_body.rotation() * Vector::new(velocity.x, velocity.y, 0.0)
+            }
+        };
+        bot_body.set_linvel(world_vel, true);
+        bot_body.set_angvel(Vector::new(0.0, 0.0, velocity.theta), true);
+    }
+
+    pub fn set_bot_acceleration(
+        &mut self,
+        color: TeamColor,
+        id: u8,
+        acceleration: VectorSE2,
+        frame: MotionCommandFrame,
+    ) {
+        let Some(handle) = self.get_bot_handle(color, id) else {
+            return;
+        };
+        let bot_body = &self.phys_world.bodies[handle];
+        let mass = bot_body.mass();
+        let moment_of_inertia = bot_body
+            .mass_properties()
+            .local_mprops
+            .reconstruct_inertia_matrix()
+            .z_axis
+            .z;
+        let wrench = VectorSE2 {
+            x: acceleration.x * mass,
+            y: acceleration.y * mass,
+            theta: acceleration.theta * moment_of_inertia,
+        };
+        self.set_bot_wrench(color, id, wrench, frame);
+    }
+
+    pub fn set_bot_wrench(
+        &mut self,
+        color: TeamColor,
+        id: u8,
+        wrench: VectorSE2,
+        frame: MotionCommandFrame,
+    ) {
+        let Some(handle) = self.get_bot_handle(color, id) else {
+            return;
+        };
+        let bot_body = &mut self.phys_world.bodies[handle];
+        let world_force = match frame {
+            MotionCommandFrame::Global => Vector::new(wrench.x, wrench.y, 0.0),
+            MotionCommandFrame::Local => bot_body.rotation() * Vector::new(wrench.x, wrench.y, 0.0),
+        };
+        bot_body.add_force(world_force, true);
+        bot_body.add_torque(Vector::new(0.0, 0.0, wrench.theta), true);
+    }
+
+    pub fn set_bot_kick(&mut self, color: TeamColor, id: u8, command: KickCommand) {
+        if command.speed <= 0.0 {
+            return;
         }
-        self.get_bot_state(id, self.blue_robot_handles[id as usize])
+        let Some(handle) = self.get_bot_handle(color, id) else {
+            return;
+        };
+        let bot_body = &self.phys_world.bodies[handle];
+        if !self.get_ball_sense(bot_body) {
+            return;
+        }
+        let chip_angle = f32::max(command.angle, 0.0);
+        let local_dir = Vector::new(f32::cos(chip_angle), 0.0, f32::sin(chip_angle));
+        let kick_dir = bot_body.rotation() * local_dir;
+        // Kick speed is relative to the robot's velocity along the kick direction
+        let bot_speed_along_kick = bot_body.linvel().dot(kick_dir);
+        let desired_speed_along_kick = bot_speed_along_kick + command.speed;
+
+        // Only change the ball's velocity along the kick direction, preserving perpendicular components
+        let ball_body = &mut self.phys_world.bodies[self.ball_handle];
+        let ball_speed_along_kick = ball_body.linvel().dot(kick_dir);
+        let impulse =
+            kick_dir * ((desired_speed_along_kick - ball_speed_along_kick) * ball_body.mass());
+        ball_body.apply_impulse(impulse, true);
+    }
+
+    fn remove_dribbler_fixed_joint(&mut self, color: TeamColor, id: u8) {
+        let fixed_joint_handles = match color {
+            TeamColor::Blue => &mut self.blue_robot_dribbler_fixed_joint_handles,
+            TeamColor::Yellow => &mut self.yellow_robot_dribbler_fixed_joint_handles
+        };
+        let Some(handle) = fixed_joint_handles[id as usize] else {
+            return;
+        };
+        self.phys_world.impulse_joints.remove(handle, true);
+        fixed_joint_handles[id as usize] = None;
+    }
+
+    pub fn set_bot_dribbler(&mut self, color: TeamColor, id: u8, command: DribblerCommand) {
+        let Some(handle) = self.get_bot_handle(color, id) else {
+            return;
+        };
+        let bot_body = &self.phys_world.bodies[handle];
+        let bot_position = bot_body.position().clone();
+        let bot_rotation = bot_body.rotation().clone();
+        if !self.get_ball_sense(bot_body) {
+            self.remove_dribbler_fixed_joint(color, id);
+            return;
+        }
+        if let DribblerCommand::Sticky = command {
+            let ball_body = &mut self.phys_world.bodies[self.ball_handle];
+            let rel_pos = bot_position.inv_mul(ball_body.position());
+            let joint = FixedJointBuilder::new()
+                .local_frame1(rel_pos)
+                .local_frame2(Pose::identity())
+                .contacts_enabled(false);
+            let joint_handle = self.phys_world
+                .impulse_joints
+                .insert(handle, self.ball_handle, joint, true);
+            let fixed_joint_handles = match color {
+                TeamColor::Blue => &mut self.blue_robot_dribbler_fixed_joint_handles,
+                TeamColor::Yellow => &mut self.yellow_robot_dribbler_fixed_joint_handles
+            };
+            fixed_joint_handles[id as usize] = Some(joint_handle);
+        } else {
+            self.remove_dribbler_fixed_joint(color, id);
+        }
+        let ball_body = &mut self.phys_world.bodies[self.ball_handle];
+        match command {
+            DribblerCommand::Off => (),
+            DribblerCommand::Sticky => (),  // handled above
+            DribblerCommand::Rotation { speed } => {
+                let mut angular_vel = Vector::new(0.0, -speed, 0.0);
+                angular_vel = bot_rotation * angular_vel;
+                ball_body.set_angvel(angular_vel, true);
+            }
+            DribblerCommand::Force { force } => {
+                let mut f = Vector::new(0.0, -force, 0.0);
+                f = bot_rotation * f;
+                ball_body.add_force(f, true);
+            }
+        }
     }
 }

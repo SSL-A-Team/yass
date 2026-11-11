@@ -1,14 +1,15 @@
 use std::ffi::{c_char, c_void};
 
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub enum TeamColor {
+    #[default]
     Blue,
     Yellow,
 }
 
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct Vector3 {
     pub x: f32,
     pub y: f32,
@@ -16,7 +17,7 @@ pub struct Vector3 {
 }
 
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct VectorSE2 {
     pub x: f32,
     pub y: f32,
@@ -24,7 +25,7 @@ pub struct VectorSE2 {
 }
 
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct Robot {
     pub id: u8,
     pub present: bool,
@@ -41,7 +42,7 @@ pub struct Robot {
 // }
 
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct Ball {
     pub position: Vector3,
     pub velocity: Vector3,
@@ -49,7 +50,7 @@ pub struct Ball {
 }
 
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct SimulationState {
     pub blue_robots: [Robot; 16],
     pub yellow_robots: [Robot; 16],
@@ -57,7 +58,7 @@ pub struct SimulationState {
 }
 
 #[repr(C)]
-#[derive(Default)]
+#[derive(Clone, Copy, Default)]
 pub enum MotionCommand {
     #[default]
     Off,
@@ -67,7 +68,7 @@ pub enum MotionCommand {
 }
 
 #[repr(C)]
-#[derive(Default)]
+#[derive(Clone, Copy, Default)]
 pub enum MotionCommandFrame {
     #[default]
     Local,
@@ -75,19 +76,7 @@ pub enum MotionCommandFrame {
 }
 
 #[repr(C)]
-#[derive(Default)]
-pub enum KickCommand {
-    /// Kicker does not fire
-    #[default]
-    Off,
-    /// Kicker fires immediately at the given speed, in m/s
-    KickImmediate { speed: f32 },
-    /// Kicker fires if the ball is touching the front of the robot, in m/s
-    KickOnTouch { speed: f32 },
-}
-
-#[repr(C)]
-#[derive(Default)]
+#[derive(Clone, Copy, Default)]
 pub enum DribblerCommand {
     /// Ball will not stick to the dribbler
     #[default]
@@ -101,7 +90,16 @@ pub enum DribblerCommand {
 }
 
 #[repr(C)]
-#[derive(Default)]
+#[derive(Clone, Copy, Default)]
+pub struct KickCommand {
+    /// Speed the ball should move at immediately after kick, in m/s
+    pub speed: f32,
+    /// Angle above the ground the ball should be kicked, in radians
+    pub angle: f32
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
 pub struct RobotCommand {
     pub id: u8,
     pub motion_command: MotionCommand,

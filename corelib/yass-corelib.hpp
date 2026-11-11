@@ -87,28 +87,10 @@ struct MotionCommand {
 };
 
 struct KickCommand {
-  enum class Tag {
-    /// Kicker does not fire
-    Off,
-    /// Kicker fires immediately at the given speed, in m/s
-    KickImmediate,
-    /// Kicker fires if the ball is touching the front of the robot, in m/s
-    KickOnTouch,
-  };
-
-  struct KickImmediate_Body {
-    float speed;
-  };
-
-  struct KickOnTouch_Body {
-    float speed;
-  };
-
-  Tag tag;
-  union {
-    KickImmediate_Body kick_immediate;
-    KickOnTouch_Body kick_on_touch;
-  };
+  /// Speed the ball should move at immediately after kick, in m/s
+  float speed;
+  /// Angle above the ground the ball should be kicked, in radians
+  float angle;
 };
 
 struct DribblerCommand {

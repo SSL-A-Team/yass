@@ -83,35 +83,15 @@ typedef struct yass_MotionCommand {
   };
 } yass_MotionCommand;
 
-typedef enum yass_KickCommand_Tag {
-  /**
-   * Kicker does not fire
-   */
-  yass_KickCommand_Off,
-  /**
-   * Kicker fires immediately at the given speed, in m/s
-   */
-  yass_KickCommand_KickImmediate,
-  /**
-   * Kicker fires if the ball is touching the front of the robot, in m/s
-   */
-  yass_KickCommand_KickOnTouch,
-} yass_KickCommand_Tag;
-
-typedef struct yass_KickCommand_yass_KickImmediate_Body {
-  float speed;
-} yass_KickCommand_yass_KickImmediate_Body;
-
-typedef struct yass_KickCommand_yass_KickOnTouch_Body {
-  float speed;
-} yass_KickCommand_yass_KickOnTouch_Body;
-
 typedef struct yass_KickCommand {
-  yass_KickCommand_Tag tag;
-  union {
-    yass_KickCommand_yass_KickImmediate_Body kick_immediate;
-    yass_KickCommand_yass_KickOnTouch_Body kick_on_touch;
-  };
+  /**
+   * Speed the ball should move at immediately after kick, in m/s
+   */
+  float speed;
+  /**
+   * Angle above the ground the ball should be kicked, in radians
+   */
+  float angle;
 } yass_KickCommand;
 
 typedef enum yass_DribblerCommand_Tag {

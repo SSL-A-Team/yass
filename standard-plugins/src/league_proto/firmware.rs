@@ -40,7 +40,7 @@ pub extern "C" fn yass_run_league_proto_firmware(
     let color_string = unsafe { (*(user_data as *mut String)).clone() };
     println!("run_firmware_frame from league-std-plugins");
     println!("Color is {color_string}");
-    commands_out[0].kick_command = yass_corelib::KickCommand::KickImmediate { speed: 20.0 };
+    commands_out[0].kick_command = yass_corelib::KickCommand { speed: 20.0, angle: 0.0 };
 }
 
 #[unsafe(no_mangle)]

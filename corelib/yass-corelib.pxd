@@ -69,24 +69,11 @@ cdef extern from *:
     MotionCommand_Acceleration_Body acceleration;
     MotionCommand_Wrench_Body wrench;
 
-  cdef enum KickCommand_Tag:
-    # Kicker does not fire
-    KickCommand_Off,
-    # Kicker fires immediately at the given speed, in m/s
-    KickCommand_KickImmediate,
-    # Kicker fires if the ball is touching the front of the robot, in m/s
-    KickCommand_KickOnTouch,
-
-  cdef struct KickCommand_KickImmediate_Body:
-    float speed;
-
-  cdef struct KickCommand_KickOnTouch_Body:
-    float speed;
-
   cdef struct KickCommand:
-    KickCommand_Tag tag;
-    KickCommand_KickImmediate_Body kick_immediate;
-    KickCommand_KickOnTouch_Body kick_on_touch;
+    # Speed the ball should move at immediately after kick, in m/s
+    float speed;
+    # Angle above the ground the ball should be kicked, in radians
+    float angle;
 
   cdef enum DribblerCommand_Tag:
     # Ball will not stick to the dribbler

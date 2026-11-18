@@ -1,4 +1,5 @@
 pub mod firmware;
+pub mod helpers;
 pub mod vision;
 
 pub mod league_protos {

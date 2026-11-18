@@ -1,11 +1,5 @@
-use serde::Deserialize;
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use yass_corelib::*;
-
-use std::{
-    ffi::{CStr, c_char},
-    net::Ipv4Addr,
-    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
-};
 
 use crate::league_proto::league_protos::{
     SslDetectionBall, SslDetectionRobot, SslFieldCircularArc, SslFieldLineSegment,
@@ -13,28 +7,6 @@ use crate::league_proto::league_protos::{
 };
 
 const METERS_TO_MM: f32 = 1000.0;
-
-#[derive(Debug, Deserialize)]
-#[serde(default)]
-pub struct VisionConfig {
-    pub address: Ipv4Addr,
-    pub port: u16,
-    pub multicast_ttl: u32,
-    pub detection_rate_hz: f64,
-    pub geometry_period_s: f64,
-}
-
-impl Default for VisionConfig {
-    fn default() -> Self {
-        Self {
-            address: Ipv4Addr::new(224, 5, 23, 2),
-            port: 10020,
-            multicast_ttl: 1,
-            detection_rate_hz: 60.0,
-            geometry_period_s: 1.0,
-        }
-    }
-}
 
 pub fn is_due(last_sent: Option<Instant>, period: Duration, now: Instant) -> bool {
     last_sent.is_none_or(|last| now.duration_since(last) >= period)
@@ -154,12 +126,4 @@ pub fn make_field_arcs(field: &FieldDimensions) -> Vec<SslFieldCircularArc> {
         thickness: field.line_thickness * METERS_TO_MM,
         r#type: Some(SslFieldShapeType::CenterCircle as i32),
     }]
-}
-
-pub fn parse_config(config: *const c_char) -> Result<VisionConfig, Box<dyn std::error::Error>> {
-    if config.is_null() {
-        return Ok(VisionConfig::default());
-    }
-    let text = unsafe { CStr::from_ptr(config) }.to_str()?;
-    Ok(serde_yaml::from_str(text)?)
 }

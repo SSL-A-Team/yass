@@ -1,7 +1,8 @@
-mod helpers;
+mod vision_config;
+mod proto_helpers;
 mod vision_plugin;
 
-use helpers::*;
+use crate::league_proto::helpers::parse_config;
 use std::{
     ffi::{c_char, c_void},
     ptr::null_mut,

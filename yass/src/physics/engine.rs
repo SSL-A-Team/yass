@@ -263,7 +263,7 @@ impl PhsyicsEngine {
         let bot_body = &self.phys_world.bodies[handle];
         let translation = &bot_body.translation();
         let rotation = &bot_body.rotation();
-        let (theta, _, _) = rotation.to_euler(glamx::EulerRot::YXZ);
+        let (theta, _, _) = rotation.to_euler(glamx::EulerRot::ZXY);
         let velocity = &bot_body.linvel();
         let angular_velocity = &bot_body.angvel();
         Robot {

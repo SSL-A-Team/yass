@@ -3,6 +3,7 @@ use std::{
     ptr::null_mut,
 };
 use yass_corelib::*;
+use crate::league_proto::league_protos::SslWrapperPacket;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn yass_load_league_proto_vision(_config: *const c_char) -> *mut c_void {
@@ -18,7 +19,7 @@ pub extern "C" fn yass_load_league_proto_vision(_config: *const c_char) -> *mut 
 
 #[unsafe(no_mangle)]
 pub extern "C" fn yass_run_league_proto_vision(_state: SimulationState, _user_data: *mut c_void) {
-    // println!("run_vision_frame from league-std-plugins");
+    let packet = SslWrapperPacket::default();
 }
 
 #[unsafe(no_mangle)]

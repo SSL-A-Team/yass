@@ -7,5 +7,10 @@ edition = "2024"
 crate-type = ["cdylib"]
 
 [dependencies]
+prost = "0.14.6"
+prost-types = "0.14.6"
 protobuf = "3.7.2"
 yass-corelib = { version = "0.1.0", path = "../corelib" }
+
+[build-dependencies]
+prost-build = "0.14.6"

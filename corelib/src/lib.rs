@@ -49,6 +49,30 @@ pub struct Ball {
     pub acceleration: Vector3,
 }
 
+/// Field dimensions, in meters.
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct FieldDimensions {
+    /// Distance between goal lines
+    pub length: f32,
+    /// Distance between touch lines
+    pub width: f32,
+    /// Distance from the field lines to the boundary walls
+    pub boundary_width: f32,
+    /// Distance between the inner edges of the goal posts
+    pub goal_width: f32,
+    /// Distance from the goal line to the inner back of the goal
+    pub goal_depth: f32,
+    /// Depth of the penalty area, measured between line centers
+    pub penalty_area_depth: f32,
+    /// Width of the penalty area, measured between line centers
+    pub penalty_area_width: f32,
+    /// Radius of the center circle, measured to the line center
+    pub center_circle_radius: f32,
+    /// Thickness of the field lines
+    pub line_thickness: f32,
+}
+
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
 pub struct SimulationState {
@@ -117,6 +141,7 @@ pub type FirmwareFrameCallback = unsafe extern "C" fn(
     commands_out: &mut [RobotCommand; 16],
 );
 
-pub type VisionLoadCallback = unsafe extern "C" fn(config: *const c_char) -> *mut c_void;
+pub type VisionLoadCallback =
+    unsafe extern "C" fn(field: FieldDimensions, config: *const c_char) -> *mut c_void;
 pub type VisionUnloadCallback = unsafe extern "C" fn(user_data: *mut c_void);
 pub type VisionFrameCallback = unsafe extern "C" fn(state: SimulationState, user_data: *mut c_void);

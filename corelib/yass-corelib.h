@@ -43,6 +43,48 @@ typedef struct yass_Ball {
   struct yass_Vector3 acceleration;
 } yass_Ball;
 
+/**
+ * Field dimensions, in meters.
+ */
+typedef struct yass_FieldDimensions {
+  /**
+   * Distance between goal lines
+   */
+  float length;
+  /**
+   * Distance between touch lines
+   */
+  float width;
+  /**
+   * Distance from the field lines to the boundary walls
+   */
+  float boundary_width;
+  /**
+   * Distance between the inner edges of the goal posts
+   */
+  float goal_width;
+  /**
+   * Distance from the goal line to the inner back of the goal
+   */
+  float goal_depth;
+  /**
+   * Depth of the penalty area, measured between line centers
+   */
+  float penalty_area_depth;
+  /**
+   * Width of the penalty area, measured between line centers
+   */
+  float penalty_area_width;
+  /**
+   * Radius of the center circle, measured to the line center
+   */
+  float center_circle_radius;
+  /**
+   * Thickness of the field lines
+   */
+  float line_thickness;
+} yass_FieldDimensions;
+
 typedef struct yass_SimulationState {
   struct yass_Robot blue_robots[16];
   struct yass_Robot yellow_robots[16];

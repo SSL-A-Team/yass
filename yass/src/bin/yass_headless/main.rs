@@ -44,6 +44,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         simulator.plugins.load_vision_plugin(
             vision_plugin_config.lib.clone(),
             vision_plugin_config.name.clone(),
+            (&config.field).into(),
             serde_yaml::to_string(vision_plugin_config)?
         )?;
     }

@@ -71,6 +71,7 @@ impl VisionPlugin {
     pub fn new(
         path: impl AsFilename,
         name: String,
+        field: FieldDimensions,
         config: String,
     ) -> Result<VisionPlugin, Box<dyn std::error::Error>> {
         unsafe {
@@ -79,7 +80,7 @@ impl VisionPlugin {
                 .get::<VisionFrameCallback>(format!("yass_run_{name}"))?
                 .into_raw();
             let load = library.get::<VisionLoadCallback>(format!("yass_load_{name}"))?;
-            let user_data = load(CString::new(config)?.as_ptr());
+            let user_data = load(field, CString::new(config)?.as_ptr());
             Ok(Self {
                 library,
                 name,
@@ -155,10 +156,11 @@ impl PluginManager {
         &mut self,
         path: impl AsFilename,
         name: String,
+        field: FieldDimensions,
         config: String,
     ) -> Result<(), Box<dyn std::error::Error>> {
         self.vision_plugins
-            .push(VisionPlugin::new(path, name, config)?);
+            .push(VisionPlugin::new(path, name, field, config)?);
         Ok(())
     }
 

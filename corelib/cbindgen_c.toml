@@ -9,6 +9,7 @@ include = [
     "VectorSE2",
     "Robot",
     "Ball",
+    "FieldDimensions",
     "SimulationState",
     "MotionCommand",
     "MotionCommandFrame",

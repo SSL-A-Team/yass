@@ -46,6 +46,28 @@ struct Ball {
   Vector3 acceleration;
 };
 
+/// Field dimensions, in meters.
+struct FieldDimensions {
+  /// Distance between goal lines
+  float length;
+  /// Distance between touch lines
+  float width;
+  /// Distance from the field lines to the boundary walls
+  float boundary_width;
+  /// Distance between the inner edges of the goal posts
+  float goal_width;
+  /// Distance from the goal line to the inner back of the goal
+  float goal_depth;
+  /// Depth of the penalty area, measured between line centers
+  float penalty_area_depth;
+  /// Width of the penalty area, measured between line centers
+  float penalty_area_width;
+  /// Radius of the center circle, measured to the line center
+  float center_circle_radius;
+  /// Thickness of the field lines
+  float line_thickness;
+};
+
 struct SimulationState {
   Robot blue_robots[16];
   Robot yellow_robots[16];

@@ -60,6 +60,10 @@ pub struct FieldConfig {
     pub boundary_width: f32,
     pub goal_width: f32,
     pub goal_depth: f32,
+    pub penalty_area_depth: f32,
+    pub penalty_area_width: f32,
+    pub center_circle_radius: f32,
+    pub line_thickness: f32,
 }
 
 impl Default for FieldConfig {
@@ -70,6 +74,26 @@ impl Default for FieldConfig {
             boundary_width: 0.3,
             goal_width: 1.0,
             goal_depth: 0.16,
+            penalty_area_depth: 1.0,
+            penalty_area_width: 2.0,
+            center_circle_radius: 0.5,
+            line_thickness: 0.01,
+        }
+    }
+}
+
+impl From<&FieldConfig> for yass_corelib::FieldDimensions {
+    fn from(field: &FieldConfig) -> Self {
+        Self {
+            length: field.length,
+            width: field.width,
+            boundary_width: field.boundary_width,
+            goal_width: field.goal_width,
+            goal_depth: field.goal_depth,
+            penalty_area_depth: field.penalty_area_depth,
+            penalty_area_width: field.penalty_area_width,
+            center_circle_radius: field.center_circle_radius,
+            line_thickness: field.line_thickness,
         }
     }
 }

@@ -1299,6 +1299,8 @@ dependencies = [
  "prost-build",
  "prost-types",
  "protobuf",
+ "serde",
+ "serde_yaml",
  "yass-corelib",
 ]
 

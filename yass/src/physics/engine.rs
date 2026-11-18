@@ -23,21 +23,25 @@ impl PhsyicsEngine {
         phys_world.gravity = Vec3::Z * -9.81;
         Self::add_field(&mut phys_world, &config.field);
         let ball_handle = Self::add_ball(&mut phys_world);
+        let yellow_start_x = ((config.yellow_team.robot_count as f32 - 1.0)/2.0) * 0.18;
         let yellow_robot_handles = (0..config.yellow_team.robot_count)
             .map(|i| {
                 Self::add_robot(
                     &mut phys_world,
                     &config.yellow_team.robot_props,
-                    Vec3::new(-1.0, i as f32 * 0.18, 0.0),
+                    Vec3::new(1.0, (i as f32 * 0.18) - yellow_start_x, 0.0),
+                    std::f32::consts::PI
                 )
             })
             .collect();
+        let blue_start_x = ((config.blue_team.robot_count as f32 - 1.0)/2.0) * 0.18;
         let blue_robot_handles = (0..config.blue_team.robot_count)
             .map(|i| {
                 Self::add_robot(
                     &mut phys_world,
                     &config.blue_team.robot_props,
-                    Vec3::new(-1.0, i as f32 * 0.18, 0.0),
+                    Vec3::new(-1.0, (i as f32 * 0.18) - blue_start_x, 0.0),
+                    0.0
                 )
             })
             .collect();
@@ -191,9 +195,11 @@ impl PhsyicsEngine {
         world: &mut PhysicsWorld,
         robot_config: &RobotConfig,
         position: Vec3,
+        heading: f32,
     ) -> RigidBodyHandle {
         let (bot_handle, _) = world.insert(
             RigidBodyBuilder::dynamic()
+                .rotation(Vector::new(0.0, 0.0, heading))
                 .translation(position)
                 .enabled_translations(true, true, false)
                 .enabled_rotations(false, false, true),
@@ -217,8 +223,7 @@ impl PhsyicsEngine {
                     robot_radius * f32::cos(f32::asin((mouth_width / 2.0) / robot_radius)),
                     0.0,
                     ball_sense_height / 2.0,
-                ))
-                .translation(position),
+                )),
             Some(bot_handle),
         );
         bot_handle

@@ -18,8 +18,8 @@ impl Simulator {
         }
     }
 
-    pub fn run_frame(&mut self) {
-        self.physics.run_frame();
+    pub fn run_frame(&mut self, delta_t: std::time::Duration) {
+        self.physics.run_frame(delta_t);
     }
 
     pub fn get_state(&self) -> yass_corelib::SimulationState {

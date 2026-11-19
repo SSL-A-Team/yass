@@ -80,7 +80,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             .run_yellow_firmware(state, delta_t_us, &mut yellow_commands);
         simulator.apply_robot_commands(yass_corelib::TeamColor::Blue, &blue_commands);
         simulator.apply_robot_commands(yass_corelib::TeamColor::Yellow, &yellow_commands);
-        simulator.run_frame();
+        simulator.run_frame(frame_duration);
         let elapsed = start.elapsed();
         if let Some(remaining) = frame_duration.checked_sub(elapsed) {
             thread::sleep(remaining);

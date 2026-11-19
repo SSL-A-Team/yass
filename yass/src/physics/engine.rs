@@ -55,7 +55,8 @@ impl PhsyicsEngine {
         }
     }
 
-    pub fn run_frame(&mut self) {
+    pub fn run_frame(&mut self, delta_t: std::time::Duration) {
+        self.phys_world.integration_parameters.dt = delta_t.as_secs_f32();
         self.phys_world.step();
     }
 

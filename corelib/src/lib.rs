@@ -1,7 +1,7 @@
 use std::ffi::{c_char, c_void};
 
 #[repr(C)]
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, PartialEq)]
 pub enum TeamColor {
     #[default]
     Blue,

@@ -86,9 +86,21 @@ pub struct SimulationState {
 pub enum MotionCommand {
     #[default]
     Off,
-    Velocity { x: f32, y: f32, theta: f32 },
-    Acceleration { x: f32, y: f32, theta: f32},
-    Wrench { x: f32, y: f32, theta: f32 },
+    Velocity {
+        x: f32,
+        y: f32,
+        theta: f32,
+    },
+    Acceleration {
+        x: f32,
+        y: f32,
+        theta: f32,
+    },
+    Wrench {
+        x: f32,
+        y: f32,
+        theta: f32,
+    },
 }
 
 #[repr(C)]
@@ -119,7 +131,7 @@ pub struct KickCommand {
     /// Speed the ball should move at immediately after kick, in m/s
     pub speed: f32,
     /// Angle above the ground the ball should be kicked, in radians
-    pub angle: f32
+    pub angle: f32,
 }
 
 #[repr(C)]
@@ -132,7 +144,8 @@ pub struct RobotCommand {
     pub dribbler_command: DribblerCommand,
 }
 
-pub type FirmwareLoadCallback = unsafe extern "C" fn(color: TeamColor, config: *const c_char) -> *mut c_void;
+pub type FirmwareLoadCallback =
+    unsafe extern "C" fn(color: TeamColor, config: *const c_char) -> *mut c_void;
 pub type FirmwareUnloadCallback = unsafe extern "C" fn(user_data: *mut c_void);
 pub type FirmwareFrameCallback = unsafe extern "C" fn(
     state: SimulationState,

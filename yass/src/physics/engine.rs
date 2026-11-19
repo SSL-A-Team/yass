@@ -23,25 +23,25 @@ impl PhsyicsEngine {
         phys_world.gravity = Vec3::Z * -9.81;
         Self::add_field(&mut phys_world, &config.field);
         let ball_handle = Self::add_ball(&mut phys_world);
-        let yellow_start_x = ((config.yellow_team.robot_count as f32 - 1.0)/2.0) * 0.18;
+        let yellow_start_x = ((config.yellow_team.robot_count as f32 - 1.0) / 2.0) * 0.18;
         let yellow_robot_handles = (0..config.yellow_team.robot_count)
             .map(|i| {
                 Self::add_robot(
                     &mut phys_world,
                     &config.yellow_team.robot_props,
                     Vec3::new(1.0, (i as f32 * 0.18) - yellow_start_x, 0.0),
-                    std::f32::consts::PI
+                    std::f32::consts::PI,
                 )
             })
             .collect();
-        let blue_start_x = ((config.blue_team.robot_count as f32 - 1.0)/2.0) * 0.18;
+        let blue_start_x = ((config.blue_team.robot_count as f32 - 1.0) / 2.0) * 0.18;
         let blue_robot_handles = (0..config.blue_team.robot_count)
             .map(|i| {
                 Self::add_robot(
                     &mut phys_world,
                     &config.blue_team.robot_props,
                     Vec3::new(-1.0, (i as f32 * 0.18) - blue_start_x, 0.0),
-                    0.0
+                    0.0,
                 )
             })
             .collect();
@@ -50,8 +50,14 @@ impl PhsyicsEngine {
             ball_handle,
             yellow_robot_handles,
             blue_robot_handles,
-            yellow_robot_dribbler_fixed_joint_handles: vec![None; config.yellow_team.robot_count as usize],
-            blue_robot_dribbler_fixed_joint_handles: vec![None; config.blue_team.robot_count as usize],
+            yellow_robot_dribbler_fixed_joint_handles: vec![
+                None;
+                config.yellow_team.robot_count as usize
+            ],
+            blue_robot_dribbler_fixed_joint_handles: vec![
+                None;
+                config.blue_team.robot_count as usize
+            ],
         }
     }
 
@@ -71,113 +77,121 @@ impl PhsyicsEngine {
         let wall_thickness = 0.02;
         let world_length = field_length + (2.0 * boundary_width) + (2.0 * wall_thickness);
         let world_width = field_width + (2.0 * boundary_width) + (2.0 * wall_thickness);
+        // Note: cuboid() takes half-extents.
         // Ground
         world.insert_collider(
-            ColliderBuilder::cuboid(world_length, world_width, 0.1).translation(Vec3::Z * -0.05),
+            ColliderBuilder::cuboid(world_length / 2.0, world_width / 2.0, 0.1 / 2.0)
+                .translation(Vec3::Z * -0.05),
             None,
         );
         // Long walls
         world.insert_collider(
-            ColliderBuilder::cuboid(world_length, wall_thickness, wall_height).translation(
-                Vec3::new(
+            ColliderBuilder::cuboid(world_length / 2.0, wall_thickness / 2.0, wall_height / 2.0)
+                .translation(Vec3::new(
                     0.0,
                     (world_width / 2.0) - (wall_thickness / 2.0),
                     wall_height / 2.0,
-                ),
-            ),
+                )),
             None,
         );
         world.insert_collider(
-            ColliderBuilder::cuboid(world_length, wall_thickness, wall_height).translation(
-                Vec3::new(
+            ColliderBuilder::cuboid(world_length / 2.0, wall_thickness / 2.0, wall_height / 2.0)
+                .translation(Vec3::new(
                     0.0,
                     -((world_width / 2.0) - (wall_thickness / 2.0)),
                     wall_height / 2.0,
-                ),
-            ),
+                )),
             None,
         );
         // Short walls
         world.insert_collider(
-            ColliderBuilder::cuboid(wall_thickness, world_width, wall_height).translation(
-                Vec3::new(
+            ColliderBuilder::cuboid(wall_thickness / 2.0, world_width / 2.0, wall_height / 2.0)
+                .translation(Vec3::new(
                     (world_length / 2.0) - (wall_thickness / 2.0),
                     0.0,
                     wall_height / 2.0,
-                ),
-            ),
+                )),
             None,
         );
         world.insert_collider(
-            ColliderBuilder::cuboid(wall_thickness, world_width, wall_height).translation(
-                Vec3::new(
+            ColliderBuilder::cuboid(wall_thickness / 2.0, world_width / 2.0, wall_height / 2.0)
+                .translation(Vec3::new(
                     -((world_length / 2.0) - (wall_thickness / 2.0)),
                     0.0,
                     wall_height / 2.0,
-                ),
-            ),
+                )),
             None,
         );
         // Positive Goal
         world.insert_collider(
-            ColliderBuilder::cuboid(boundary_width, wall_thickness, wall_height).translation(
-                Vec3::new(
-                    (field_length / 2.0) + (boundary_width / 2.0),
-                    (goal_width / 2.0) + (wall_thickness / 2.0),
-                    wall_height / 2.0,
-                ),
-            ),
+            ColliderBuilder::cuboid(
+                boundary_width / 2.0,
+                wall_thickness / 2.0,
+                wall_height / 2.0,
+            )
+            .translation(Vec3::new(
+                (field_length / 2.0) + (boundary_width / 2.0),
+                (goal_width / 2.0) + (wall_thickness / 2.0),
+                wall_height / 2.0,
+            )),
             None,
         );
         world.insert_collider(
-            ColliderBuilder::cuboid(boundary_width, wall_thickness, wall_height).translation(
-                Vec3::new(
-                    (field_length / 2.0) + (boundary_width / 2.0),
-                    -((goal_width / 2.0) + (wall_thickness / 2.0)),
-                    wall_height / 2.0,
-                ),
-            ),
+            ColliderBuilder::cuboid(
+                boundary_width / 2.0,
+                wall_thickness / 2.0,
+                wall_height / 2.0,
+            )
+            .translation(Vec3::new(
+                (field_length / 2.0) + (boundary_width / 2.0),
+                -((goal_width / 2.0) + (wall_thickness / 2.0)),
+                wall_height / 2.0,
+            )),
             None,
         );
         world.insert_collider(
-            ColliderBuilder::cuboid(wall_thickness, goal_width, wall_height).translation(
-                Vec3::new(
+            ColliderBuilder::cuboid(wall_thickness / 2.0, goal_width / 2.0, wall_height / 2.0)
+                .translation(Vec3::new(
                     (field_length / 2.0) + goal_depth + (wall_thickness / 2.0),
                     0.0,
                     wall_height / 2.0,
-                ),
-            ),
+                )),
             None,
         );
         // Negative Goal
         world.insert_collider(
-            ColliderBuilder::cuboid(boundary_width, wall_thickness, wall_height).translation(
-                Vec3::new(
-                    -((field_length / 2.0) + (boundary_width / 2.0)),
-                    (goal_width / 2.0) + (wall_thickness / 2.0),
-                    wall_height / 2.0,
-                ),
-            ),
+            ColliderBuilder::cuboid(
+                boundary_width / 2.0,
+                wall_thickness / 2.0,
+                wall_height / 2.0,
+            )
+            .translation(Vec3::new(
+                -((field_length / 2.0) + (boundary_width / 2.0)),
+                (goal_width / 2.0) + (wall_thickness / 2.0),
+                wall_height / 2.0,
+            )),
             None,
         );
         world.insert_collider(
-            ColliderBuilder::cuboid(boundary_width, wall_thickness, wall_height).translation(
-                Vec3::new(
-                    -((field_length / 2.0) + (boundary_width / 2.0)),
-                    -((goal_width / 2.0) + (wall_thickness / 2.0)),
-                    wall_height / 2.0,
-                ),
-            ),
+            ColliderBuilder::cuboid(
+                boundary_width / 2.0,
+                wall_thickness / 2.0,
+                wall_height / 2.0,
+            )
+            .translation(Vec3::new(
+                -((field_length / 2.0) + (boundary_width / 2.0)),
+                -((goal_width / 2.0) + (wall_thickness / 2.0)),
+                wall_height / 2.0,
+            )),
             None,
         );
         world.insert_collider(
-            ColliderBuilder::cuboid(wall_thickness, goal_width, wall_height).translation(
-                Vec3::new(
+            ColliderBuilder::cuboid(wall_thickness / 2.0, goal_width / 2.0, wall_height / 2.0)
+                .translation(Vec3::new(
                     -((field_length / 2.0) + goal_depth + (wall_thickness / 2.0)),
                     0.0,
                     wall_height / 2.0,
-                ),
-            ),
+                )),
             None,
         );
     }
@@ -332,14 +346,23 @@ impl PhsyicsEngine {
             return;
         };
         let bot_body = &mut self.phys_world.bodies[handle];
+        let mass = bot_body.mass();
+        let moment_of_inertia = bot_body
+            .mass_properties()
+            .local_mprops
+            .reconstruct_inertia_matrix()
+            .z_axis
+            .z;
         let world_vel = match frame {
             MotionCommandFrame::Global => Vector::new(velocity.x, velocity.y, 0.0),
             MotionCommandFrame::Local => {
                 bot_body.rotation() * Vector::new(velocity.x, velocity.y, 0.0)
             }
         };
-        bot_body.set_linvel(world_vel, true);
-        bot_body.set_angvel(Vector::new(0.0, 0.0, velocity.theta), true);
+        let impulse = mass * (world_vel - bot_body.linvel());
+        bot_body.apply_impulse(impulse, true);
+        let torque_impulse = Vec3::Z * (moment_of_inertia * (velocity.theta - bot_body.angvel().z));
+        bot_body.apply_torque_impulse(torque_impulse, true);
     }
 
     pub fn set_bot_acceleration(
@@ -416,7 +439,7 @@ impl PhsyicsEngine {
     fn remove_dribbler_fixed_joint(&mut self, color: TeamColor, id: u8) {
         let fixed_joint_handles = match color {
             TeamColor::Blue => &mut self.blue_robot_dribbler_fixed_joint_handles,
-            TeamColor::Yellow => &mut self.yellow_robot_dribbler_fixed_joint_handles
+            TeamColor::Yellow => &mut self.yellow_robot_dribbler_fixed_joint_handles,
         };
         let Some(handle) = fixed_joint_handles[id as usize] else {
             return;
@@ -443,12 +466,13 @@ impl PhsyicsEngine {
                 .local_frame1(rel_pos)
                 .local_frame2(Pose::identity())
                 .contacts_enabled(false);
-            let joint_handle = self.phys_world
-                .impulse_joints
-                .insert(handle, self.ball_handle, joint, true);
+            let joint_handle =
+                self.phys_world
+                    .impulse_joints
+                    .insert(handle, self.ball_handle, joint, true);
             let fixed_joint_handles = match color {
                 TeamColor::Blue => &mut self.blue_robot_dribbler_fixed_joint_handles,
-                TeamColor::Yellow => &mut self.yellow_robot_dribbler_fixed_joint_handles
+                TeamColor::Yellow => &mut self.yellow_robot_dribbler_fixed_joint_handles,
             };
             fixed_joint_handles[id as usize] = Some(joint_handle);
         } else {
@@ -457,7 +481,7 @@ impl PhsyicsEngine {
         let ball_body = &mut self.phys_world.bodies[self.ball_handle];
         match command {
             DribblerCommand::Off => (),
-            DribblerCommand::Sticky => (),  // handled above
+            DribblerCommand::Sticky => (), // handled above
             DribblerCommand::Rotation { speed } => {
                 let mut angular_vel = Vector::new(0.0, -speed, 0.0);
                 angular_vel = bot_rotation * angular_vel;
@@ -469,5 +493,62 @@ impl PhsyicsEngine {
                 ball_body.add_force(f, true);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::TeamConfig;
+
+    fn test_config() -> Config {
+        let team = TeamConfig {
+            firmware: None,
+            robot_props: RobotConfig::default(),
+            robot_count: 1,
+        };
+        Config {
+            field: FieldConfig::default(),
+            blue_team: team.clone(),
+            yellow_team: team,
+            vision_plugins: vec![],
+        }
+    }
+
+    #[test]
+    fn robot_stops_at_wall_under_local_velocity() {
+        let config = test_config();
+        let mut engine = PhsyicsEngine::new(&config);
+        let start = engine.get_bot_state(TeamColor::Blue, 0);
+        // Drive the robot (local -Y, i.e. to its right) into the -Y wall for 6 seconds.
+        for _ in 0..360 {
+            engine.set_bot_velocity(
+                TeamColor::Blue,
+                0,
+                VectorSE2 {
+                    x: 0.0,
+                    y: -1.0,
+                    theta: 0.0,
+                },
+                MotionCommandFrame::Local,
+            );
+            engine.run_frame(std::time::Duration::from_secs_f32(1.0 / 60.0));
+        }
+        let end = engine.get_bot_state(TeamColor::Blue, 0);
+        println!(
+            "start=({}, {}, {}) end=({}, {}, {})",
+            start.pose.x, start.pose.y, start.pose.theta, end.pose.x, end.pose.y, end.pose.theta
+        );
+        let wall_inner_face = -(config.field.width / 2.0 + config.field.boundary_width);
+        let radius = config.blue_team.robot_props.radius;
+        assert!(
+            end.pose.y >= wall_inner_face + radius - 0.01,
+            "robot passed through wall: y={}",
+            end.pose.y
+        );
+        assert!(
+            (end.pose.theta - start.pose.theta).abs() < 0.05,
+            "heading drifted"
+        );
     }
 }

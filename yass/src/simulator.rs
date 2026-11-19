@@ -6,7 +6,6 @@ use yass_corelib::*;
 pub struct Simulator {
     pub plugins: PluginManager,
     physics: PhsyicsEngine,
-    config: Config,
 }
 
 impl Simulator {
@@ -14,7 +13,6 @@ impl Simulator {
         Self {
             plugins: PluginManager::new(),
             physics: PhsyicsEngine::new(&config),
-            config: config.clone(),
         }
     }
 

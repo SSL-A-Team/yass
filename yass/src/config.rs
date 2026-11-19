@@ -8,7 +8,7 @@ pub struct PluginConfig {
     pub name: String,
 
     #[serde(flatten)]
-    #[schemars(schema_with="flatten_arbitrary_yaml_schema")]
+    #[schemars(schema_with = "flatten_arbitrary_yaml_schema")]
     pub extra_keys: HashMap<String, serde_yaml::Value>,
 }
 
@@ -34,7 +34,7 @@ impl Default for RobotConfig {
             radius: 0.09,
             height: 0.18,
             mouth_width: 0.08,
-            mass: 1.0,  // TODO: what's a reasonable default for this?
+            mass: 1.0, // TODO: what's a reasonable default for this?
         }
     }
 }

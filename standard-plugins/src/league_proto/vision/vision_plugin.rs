@@ -3,7 +3,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::league_proto::vision::{vision_config::*, proto_helpers::*};
+use crate::league_proto::vision::{proto_helpers::*, vision_config::*};
 use prost::Message;
 use yass_corelib::*;
 

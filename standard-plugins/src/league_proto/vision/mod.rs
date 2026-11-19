@@ -1,5 +1,5 @@
-mod vision_config;
 mod proto_helpers;
+mod vision_config;
 mod vision_plugin;
 
 use crate::league_proto::helpers::parse_config;

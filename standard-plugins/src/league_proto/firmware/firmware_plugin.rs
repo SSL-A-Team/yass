@@ -37,7 +37,7 @@ impl FirmwarePlugin {
     pub fn run(
         &mut self,
         state: &SimulationState,
-        delta_t_us: u64,
+        _delta_t_us: u64,
         commands_out: &mut [RobotCommand; 16],
     ) {
         if let Ok(Some((bytes_read, sender))) = self.get_newest_command_packet() {
@@ -51,7 +51,6 @@ impl FirmwarePlugin {
                                     eprintln!("Wheel velocities not yet supported.")
                                 }
                                 Command::LocalVelocity(move_local_velocity) => {
-                                    println!("Local vel: {0}, {1}, {2}", move_local_velocity.forward, move_local_velocity.left, move_local_velocity.angular);
                                     command_out.motion_command = MotionCommand::Velocity {
                                         x: move_local_velocity.forward,
                                         y: move_local_velocity.left,

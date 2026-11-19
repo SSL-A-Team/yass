@@ -17,7 +17,7 @@ fn main() {
         (
             "cython",
             PathBuf::from(&crate_dir).join(format!("{}.pxd", package_name)),
-        )
+        ),
     ];
 
     for (lang, output_path) in cbindgen_languages {

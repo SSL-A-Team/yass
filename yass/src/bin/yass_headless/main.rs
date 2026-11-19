@@ -12,7 +12,7 @@ use yass::{init_commands, reset_commands};
 #[derive(Parser, Debug)]
 #[command(author, version, about = "A RoboCup SSL Simulator")]
 struct Args {
-    #[arg(short='c', long)]
+    #[arg(short = 'c', long)]
     config: PathBuf,
 }
 
@@ -29,7 +29,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             blue_firmware.lib.clone(),
             blue_firmware.name.clone(),
             yass_corelib::TeamColor::Blue,
-            serde_yaml::to_string(blue_firmware)?
+            serde_yaml::to_string(blue_firmware)?,
         )?;
     }
     if let Some(yellow_firmware) = config.yellow_team.firmware.as_ref() {
@@ -37,7 +37,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             yellow_firmware.lib.clone(),
             yellow_firmware.name.clone(),
             yass_corelib::TeamColor::Yellow,
-            serde_yaml::to_string(yellow_firmware)?
+            serde_yaml::to_string(yellow_firmware)?,
         )?;
     }
     for vision_plugin_config in config.vision_plugins.iter() {
@@ -45,7 +45,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             vision_plugin_config.lib.clone(),
             vision_plugin_config.name.clone(),
             (&config.field).into(),
-            serde_yaml::to_string(vision_plugin_config)?
+            serde_yaml::to_string(vision_plugin_config)?,
         )?;
     }
 

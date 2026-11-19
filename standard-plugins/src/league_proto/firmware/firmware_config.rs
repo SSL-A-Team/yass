@@ -12,7 +12,7 @@ impl Default for FirmwareConfig {
     fn default() -> Self {
         Self {
             address: Ipv4Addr::new(127, 0, 0, 1),
-            port: 10301
+            port: 10301,
         }
     }
 }

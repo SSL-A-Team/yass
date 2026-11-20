@@ -1,12 +1,11 @@
 use clap::Parser;
 use std::error::Error;
 use std::net::SocketAddrV4;
-use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
-use yass::config::Config;
+use yass::config::load_config;
 use yass::control_interface::ControlInterface;
 use yass::simulator::Simulator;
 use yass::{init_commands, reset_commands};
@@ -14,15 +13,15 @@ use yass::{init_commands, reset_commands};
 #[derive(Parser, Debug)]
 #[command(author, version, about = "A RoboCup SSL Simulator")]
 struct Args {
-    #[arg(short = 'c', long)]
-    config: PathBuf,
+    /// Name of a built-in default config (e.g. "div_b") or a path to a config file
+    #[arg(short = 'c', long, default_value = "div_b")]
+    config: String,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
-    let config_file_contents = std::fs::read_to_string(args.config)?;
-    let config: Config = serde_yaml::from_str(&config_file_contents)?;
+    let config = load_config(&args.config)?;
 
     let mut simulator = Simulator::new(&config);
     let mut control_interface =

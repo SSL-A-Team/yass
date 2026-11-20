@@ -124,3 +124,46 @@ pub struct Config {
     pub yellow_team: TeamConfig,
     pub vision_plugins: Vec<PluginConfig>,
 }
+
+mod default_configs {
+    include!(concat!(env!("OUT_DIR"), "/default_configs.rs"));
+}
+
+pub fn default_config_names() -> impl Iterator<Item = &'static str> {
+    default_configs::DEFAULT_CONFIGS.iter().map(|(name, _)| *name)
+}
+
+pub fn default_config_contents(name: &str) -> Option<&'static str> {
+    default_configs::DEFAULT_CONFIGS
+        .iter()
+        .find(|(n, _)| *n == name)
+        .map(|(_, contents)| *contents)
+}
+
+pub fn load_config(name_or_path: &str) -> Result<Config, Box<dyn std::error::Error>> {
+    let contents = match default_config_contents(name_or_path) {
+        Some(contents) => contents.to_owned(),
+        None => std::fs::read_to_string(name_or_path).map_err(|e| {
+            format!(
+                "Could not read config file '{name_or_path}': {e}. \
+                 Expected a path or one of the default configs: {}",
+                default_config_names().collect::<Vec<_>>().join(", ")
+            )
+        })?,
+    };
+    Ok(serde_yaml::from_str(&contents)
+        .map_err(|e| format!("Failed to parse config '{name_or_path}': {e}"))?)
+}
+
+#[cfg(test)]
+mod default_config_tests {
+    use super::*;
+
+    #[test]
+    fn all_default_configs_parse() {
+        assert!(default_config_names().next().is_some());
+        for name in default_config_names() {
+            load_config(name).unwrap_or_else(|e| panic!("Default config '{name}' failed: {e}"));
+        }
+    }
+}

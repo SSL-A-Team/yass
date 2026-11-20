@@ -26,9 +26,10 @@ impl FirmwarePlugin {
         color: TeamColor,
         config: FirmwareConfig,
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        println!("{config:?}");
-        let socket = UdpSocket::bind(SocketAddrV4::new(config.address, config.port))?;
+        let addr = SocketAddrV4::new(config.address, config.port);
+        let socket = UdpSocket::bind(addr)?;
         socket.set_nonblocking(true)?;
+        println!("league_proto_firmware: listening on {addr}");
         Ok(Self {
             color,
             socket,

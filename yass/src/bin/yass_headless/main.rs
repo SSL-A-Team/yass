@@ -1,14 +1,15 @@
 use clap::Parser;
 use std::error::Error;
+use std::net::SocketAddrV4;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
 use yass::config::Config;
+use yass::control_interface::ControlInterface;
 use yass::simulator::Simulator;
 use yass::{init_commands, reset_commands};
-use yass::control_interface::ControlInterface;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about = "A RoboCup SSL Simulator")]
@@ -24,7 +25,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let config: Config = serde_yaml::from_str(&config_file_contents)?;
 
     let mut simulator = Simulator::new(&config);
-    let mut control_interface = ControlInterface::new()?;
+    let mut control_interface =
+        ControlInterface::new(SocketAddrV4::new(config.control.ip, config.control.port))?;
 
     if let Some(blue_firmware) = config.blue_team.firmware.as_ref() {
         simulator.plugins.load_firmware_plugin(

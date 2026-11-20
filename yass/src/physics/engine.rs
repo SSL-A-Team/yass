@@ -568,7 +568,7 @@ impl PhsyicsEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::TeamConfig;
+    use crate::config::{ControlConfig, TeamConfig};
 
     fn test_config() -> Config {
         let team = TeamConfig {
@@ -581,6 +581,7 @@ mod tests {
             blue_team: team.clone(),
             yellow_team: team,
             vision_plugins: vec![],
+            control: ControlConfig::default(),
         }
     }
 

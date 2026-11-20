@@ -1,6 +1,6 @@
 use schemars::{JsonSchema, Schema, SchemaGenerator, json_schema};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{collections::HashMap, net::Ipv4Addr};
 
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 pub struct PluginConfig {
@@ -99,7 +99,25 @@ impl From<&FieldConfig> for yass_corelib::FieldDimensions {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
+#[serde(default)]
+pub struct ControlConfig {
+    pub ip: Ipv4Addr,
+    pub port: u16,
+}
+
+impl Default for ControlConfig {
+    fn default() -> Self {
+        Self {
+            ip: Ipv4Addr::new(127, 0, 0, 1),
+            port: 10300,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 pub struct Config {
+    #[serde(default)]
+    pub control: ControlConfig,
     #[serde(default)]
     pub field: FieldConfig,
     pub blue_team: TeamConfig,

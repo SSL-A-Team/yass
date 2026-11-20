@@ -1,6 +1,6 @@
 use std::{
     io::ErrorKind,
-    net::{Ipv4Addr, SocketAddrV4, UdpSocket},
+    net::{SocketAddrV4, UdpSocket},
 };
 
 use crate::simulator::Simulator;
@@ -14,9 +14,10 @@ pub struct ControlInterface {
 }
 
 impl ControlInterface {
-    pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        let socket = UdpSocket::bind(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 10300))?;
+    pub fn new(addr: SocketAddrV4) -> Result<Self, Box<dyn std::error::Error>> {
+        let socket = UdpSocket::bind(addr)?;
         socket.set_nonblocking(true)?;
+        println!("Control listening on {0}", addr);
         Ok(Self {
             socket: socket,
             recv_buffer: [0u8; 2048],

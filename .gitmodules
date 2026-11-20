@@ -1,3 +1,3 @@
 [submodule "standard-plugins/ssl-protocol-defs"]
-	path = standard-plugins/ssl-protocol-defs
+	path = league-protos/ssl-protocol-defs
 	url = https://github.com/RoboCup-SSL/ssl-protocol-defs.git

@@ -65,4 +65,31 @@ impl Simulator {
                 .set_bot_dribbler(color, command.id, command.dribbler_command);
         }
     }
+
+    pub fn teleport_ball(
+        &mut self,
+        x: Option<f32>,
+        y: Option<f32>,
+        z: Option<f32>,
+        vel_x: Option<f32>,
+        vel_y: Option<f32>,
+        vel_z: Option<f32>,
+    ) {
+        self.physics.teleport_ball(x, y, z, vel_x, vel_y, vel_z);
+    }
+
+    pub fn teleport_robot(
+        &mut self,
+        color: TeamColor,
+        id: u8,
+        x: Option<f32>,
+        y: Option<f32>,
+        theta: Option<f32>,
+        vel_x: Option<f32>,
+        vel_y: Option<f32>,
+        vel_theta: Option<f32>,
+    ) {
+        self.physics
+            .teleport_robot(color, id, x, y, theta, vel_x, vel_y, vel_theta);
+    }
 }

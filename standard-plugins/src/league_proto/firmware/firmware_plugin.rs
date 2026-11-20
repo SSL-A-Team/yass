@@ -1,8 +1,11 @@
-use crate::league_proto::league_protos::robot_move_command::Command;
-use crate::league_proto::league_protos::{RobotControl, RobotFeedback};
-use crate::league_proto::{
-    firmware::firmware_config::FirmwareConfig, league_protos::RobotControlResponse,
+use yass_league_protos::{
+    RobotControl,
+    RobotFeedback,
+    robot_move_command::Command,
+    RobotControlResponse
 };
+
+use crate::league_proto::firmware::firmware_config::FirmwareConfig;
 use prost::Message;
 use std::{
     io::ErrorKind,

@@ -7,9 +7,11 @@ edition = "2024"
 clap = { version = "4.6.5", features = ["derive"] }
 ctrlc = "3.5.2"
 libloading = "0.9.0"
+prost = "0.14.6"
 rapier3d = "0.34.0"
 rust-yaml = "1.1.0"
 schemars = "1.2.2"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_yaml = "0.9.34"
 yass-corelib = { version = "0.1.0", path = "../corelib" }
+yass-league-protos = { version = "0.1.0", path = "../league-protos" }

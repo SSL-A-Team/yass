@@ -1,6 +1,7 @@
 use yass_corelib::RobotCommand;
 
 pub mod config;
+pub mod control_interface;
 mod physics;
 pub mod plugin_manager;
 pub mod simulator;

@@ -7,8 +7,8 @@ use crate::league_proto::vision::{proto_helpers::*, vision_config::*};
 use prost::Message;
 use yass_corelib::*;
 
-use crate::league_proto::league_protos::{
-    SslDetectionFrame, SslGeometryData, SslSource, SslWrapperPacket,
+use yass_league_protos::{
+    SslDetectionFrame, SslGeometryData, SslSource, SslWrapperPacket
 };
 
 pub struct VisionPlugin {

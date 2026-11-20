@@ -1,7 +1,7 @@
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use yass_corelib::*;
 
-use crate::league_proto::league_protos::{
+use yass_league_protos::{
     SslDetectionBall, SslDetectionRobot, SslFieldCircularArc, SslFieldLineSegment,
     SslFieldShapeType, SslGeometryData, SslGeometryFieldSize, Vector2f,
 };

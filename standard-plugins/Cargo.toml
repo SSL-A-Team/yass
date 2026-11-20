@@ -8,11 +8,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 prost = "0.14.6"
-prost-types = "0.14.6"
-protobuf = "3.7.2"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_yaml = "0.9.34"
 yass-corelib = { version = "0.1.0", path = "../corelib" }
-
-[build-dependencies]
-prost-build = "0.14.6"
+yass-league-protos = { version = "0.1.0", path = "../league-protos" }

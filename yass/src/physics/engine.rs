@@ -1,11 +1,13 @@
-use rapier3d::prelude::*;
-use yass_corelib::{
-    Ball, DribblerCommand, KickCommand, MotionCommandFrame, Robot, TeamColor, Vector3, VectorSE2,
-};
-
 use crate::{
     config::{Config, FieldConfig, RobotConfig},
     physics::{constants, mesh},
+};
+use rapier3d::{
+    glamx::{EulerRot, Quat},
+    prelude::*,
+};
+use yass_corelib::{
+    Ball, DribblerCommand, KickCommand, MotionCommandFrame, Robot, TeamColor, Vector3, VectorSE2,
 };
 
 pub struct PhsyicsEngine {
@@ -493,6 +495,73 @@ impl PhsyicsEngine {
                 ball_body.add_force(f, true);
             }
         }
+    }
+
+    pub fn teleport_ball(
+        &mut self,
+        x: Option<f32>,
+        y: Option<f32>,
+        z: Option<f32>,
+        vel_x: Option<f32>,
+        vel_y: Option<f32>,
+        vel_z: Option<f32>,
+    ) {
+        let ball_body = &mut self.phys_world.bodies[self.ball_handle];
+        let mut pos = ball_body.position().clone();
+        pos.translation.x = x.unwrap_or(pos.translation.x);
+        pos.translation.y = y.unwrap_or(pos.translation.y);
+        pos.translation.z = z.unwrap_or(pos.translation.z);
+        ball_body.set_position(pos, true);
+        let current_vel = ball_body.linvel();
+        let mut target_vel = current_vel.clone();
+        target_vel.x = vel_x.unwrap_or(target_vel.x);
+        target_vel.y = vel_y.unwrap_or(target_vel.y);
+        target_vel.z = vel_z.unwrap_or(target_vel.z);
+        let impulse = ball_body.mass() * (target_vel - current_vel);
+        ball_body.apply_impulse(impulse, true);
+    }
+
+    pub fn teleport_robot(
+        &mut self,
+        color: TeamColor,
+        id: u8,
+        x: Option<f32>,
+        y: Option<f32>,
+        theta: Option<f32>,
+        vel_x: Option<f32>,
+        vel_y: Option<f32>,
+        vel_theta: Option<f32>,
+    ) {
+        let Some(handle) = self.get_bot_handle(color, id) else {
+            return;
+        };
+        let bot_body = &mut self.phys_world.bodies[handle];
+        let mut pos = bot_body.position().clone();
+        pos.translation.x = x.unwrap_or(pos.translation.x);
+        pos.translation.y = y.unwrap_or(pos.translation.y);
+        if let Some(t) = theta {
+            pos.rotation = Quat::from_euler(EulerRot::ZXY, t, 0.0, 0.0);
+        }
+        bot_body.set_position(pos, true);
+
+        let current_vel = bot_body.linvel();
+        let mut target_vel = current_vel.clone();
+        target_vel.x = vel_x.unwrap_or(target_vel.x);
+        target_vel.y = vel_y.unwrap_or(target_vel.y);
+        let impulse = bot_body.mass() * (target_vel - current_vel);
+        bot_body.apply_impulse(impulse, true);
+
+        let current_ang_vel = bot_body.angvel();
+        let mut target_ang_vel = current_ang_vel.clone();
+        target_ang_vel.z = vel_theta.unwrap_or(target_ang_vel.z);
+        let moment_of_inertia = bot_body
+            .mass_properties()
+            .local_mprops
+            .reconstruct_inertia_matrix()
+            .z_axis
+            .z;
+        let ang_impulse = moment_of_inertia * (target_ang_vel - current_ang_vel);
+        bot_body.apply_torque_impulse(ang_impulse, true);
     }
 }
 

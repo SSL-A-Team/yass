@@ -29,7 +29,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     if let Some(blue_firmware) = config.blue_team.firmware.as_ref() {
         simulator.plugins.load_firmware_plugin(
-            blue_firmware.lib.clone(),
+            &blue_firmware.lib,
             blue_firmware.name.clone(),
             yass_corelib::TeamColor::Blue,
             serde_yaml::to_string(blue_firmware)?,
@@ -37,7 +37,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
     if let Some(yellow_firmware) = config.yellow_team.firmware.as_ref() {
         simulator.plugins.load_firmware_plugin(
-            yellow_firmware.lib.clone(),
+            &yellow_firmware.lib,
             yellow_firmware.name.clone(),
             yass_corelib::TeamColor::Yellow,
             serde_yaml::to_string(yellow_firmware)?,
@@ -45,7 +45,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
     for vision_plugin_config in config.vision_plugins.iter() {
         simulator.plugins.load_vision_plugin(
-            vision_plugin_config.lib.clone(),
+            &vision_plugin_config.lib,
             vision_plugin_config.name.clone(),
             (&config.field).into(),
             serde_yaml::to_string(vision_plugin_config)?,

@@ -2,6 +2,9 @@
 name = "yass"
 version = "0.1.0"
 edition = "2024"
+authors = ["The A-Team"]
+license = "MIT"
+description = "Yet Another SSL Simulator"
 
 [dependencies]
 clap = { version = "4.6.5", features = ["derive"] }
@@ -15,3 +18,12 @@ serde = { version = "1.0.229", features = ["derive"] }
 serde_yaml = "0.9.34"
 yass-corelib = { version = "0.1.0", path = "../corelib" }
 yass-league-protos = { version = "0.1.0", path = "../league-protos" }
+
+[package.metadata.deb]
+depends = "$auto"
+assets = [
+    ["target/release/yass","usr/bin/","755"],
+    ["target/release/yass_headless","usr/bin/","755"],
+    ["target/release/yass_config_schema","usr/bin/","755"],
+    ["target/release/libyass_standard_plugins.so","usr/lib/yass/plugins/","644"]
+]

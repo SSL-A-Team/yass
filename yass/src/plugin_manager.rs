@@ -1,6 +1,6 @@
 use core::ops::{Deref, Drop};
 use libloading::os;
-use libloading::{AsFilename, Error, Library, Symbol};
+use libloading::{Library, Symbol};
 use std::ffi::{CString, c_void};
 use std::rc::Rc;
 use yass_corelib::*;
@@ -32,13 +32,13 @@ struct VisionPlugin {
 
 impl FirmwarePlugin {
     pub fn new(
-        path: impl AsFilename,
+        path: &str,
         name: String,
         color: yass_corelib::TeamColor,
         config: String,
     ) -> Result<FirmwarePlugin, Box<dyn std::error::Error>> {
         unsafe {
-            let library = Rc::new(libloading::Library::new(path)?);
+            let library = Rc::new(libloading::Library::new(resolve_libname(path)?)?);
             let frame = library
                 .get::<FirmwareFrameCallback>(format!("yass_run_{name}"))?
                 .into_raw();
@@ -58,7 +58,7 @@ impl Drop for FirmwarePlugin {
     fn drop(&mut self) {
         unsafe {
             let name = self.name.clone();
-            let unload: Result<Symbol<FirmwareUnloadCallback>, Error> =
+            let unload: Result<Symbol<FirmwareUnloadCallback>, libloading::Error> =
                 self.library.get(format!("yass_unload_{name}"));
             if let Ok(func) = unload {
                 func(self.user_data);
@@ -69,13 +69,13 @@ impl Drop for FirmwarePlugin {
 
 impl VisionPlugin {
     pub fn new(
-        path: impl AsFilename,
+        path: &str,
         name: String,
         field: FieldDimensions,
         config: String,
     ) -> Result<VisionPlugin, Box<dyn std::error::Error>> {
         unsafe {
-            let library = Rc::new(libloading::Library::new(path)?);
+            let library = Rc::new(libloading::Library::new(resolve_libname(path)?)?);
             let frame = library
                 .get::<VisionFrameCallback>(format!("yass_run_{name}"))?
                 .into_raw();
@@ -95,7 +95,7 @@ impl Drop for VisionPlugin {
     fn drop(&mut self) {
         unsafe {
             let name = self.name.clone();
-            let unload: Result<Symbol<FirmwareUnloadCallback>, Error> =
+            let unload: Result<Symbol<FirmwareUnloadCallback>, libloading::Error> =
                 self.library.get(format!("yass_unload_{name}"));
             if let Ok(func) = unload {
                 func(self.user_data);
@@ -136,7 +136,7 @@ impl PluginManager {
 
     pub fn load_firmware_plugin(
         &mut self,
-        path: impl AsFilename,
+        path: &str,
         name: String,
         color: yass_corelib::TeamColor,
         config: String,
@@ -154,7 +154,7 @@ impl PluginManager {
 
     pub fn load_vision_plugin(
         &mut self,
-        path: impl AsFilename,
+        path: &str,
         name: String,
         field: FieldDimensions,
         config: String,
@@ -197,4 +197,28 @@ impl PluginManager {
             }
         }
     }
+}
+
+fn resolve_libname(libname: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let exe_path = std::env::current_exe()?;
+    let exe_dir = exe_path
+        .parent()
+        .ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Could not determine executable path",
+            )
+        })?;
+
+    let installed_default_plugins_dir = exe_dir.join("../lib/yass/plugins");
+    if installed_default_plugins_dir.is_dir() {
+        let candidate_path = installed_default_plugins_dir.join(libname);
+        if candidate_path.is_file() {
+            let answer = candidate_path.to_str().ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::Other, "Could not resolve library")
+            })?.to_owned();
+            return Ok(answer);
+        }
+    }
+    Ok(libname.to_owned())
 }

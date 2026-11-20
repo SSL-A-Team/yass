@@ -1,8 +1,5 @@
 use yass_league_protos::{
-    RobotControl,
-    RobotFeedback,
-    robot_move_command::Command,
-    RobotControlResponse
+    RobotControl, RobotControlResponse, RobotFeedback, robot_move_command::Command,
 };
 
 use crate::league_proto::firmware::firmware_config::FirmwareConfig;
@@ -15,6 +12,7 @@ use yass_corelib::{
     DribblerCommand, MotionCommand, MotionCommandFrame, RobotCommand, SimulationState, TeamColor,
 };
 pub struct FirmwarePlugin {
+    config: FirmwareConfig,
     color: TeamColor,
     socket: UdpSocket,
     recv_buffer: [u8; 2048], // TODO(mbarulic): determine true max-needed size
@@ -31,6 +29,7 @@ impl FirmwarePlugin {
         socket.set_nonblocking(true)?;
         println!("league_proto_firmware: listening on {addr}");
         Ok(Self {
+            config: config.clone(),
             color,
             socket,
             recv_buffer: [0u8; 2048],
@@ -48,6 +47,7 @@ impl FirmwarePlugin {
             if let Ok(message) = RobotControl::decode(&self.recv_buffer[..bytes_read]) {
                 for command in message.robot_commands {
                     let command_out = &mut commands_out[command.id as usize];
+                    command_out.active = true;
                     if let Some(robot_move_command) = command.move_command {
                         if let Some(move_command) = robot_move_command.command {
                             match move_command {
@@ -76,9 +76,17 @@ impl FirmwarePlugin {
                     command_out.kick_command.speed = command.kick_speed.unwrap_or(0.0);
                     command_out.kick_command.angle = command.kick_angle.unwrap_or(0.0);
                     if let Some(dribbler_speed) = command.dribbler_speed {
-                        command_out.dribbler_command = DribblerCommand::Rotation {
-                            speed: dribbler_speed,
-                        };
+                        if self.config.use_sticky_dribbler {
+                            if dribbler_speed > 0.0 {
+                                command_out.dribbler_command = DribblerCommand::Sticky;
+                            } else {
+                                command_out.dribbler_command = DribblerCommand::Off;
+                            }
+                        } else {
+                            command_out.dribbler_command = DribblerCommand::Rotation {
+                                speed: dribbler_speed,
+                            };
+                        }
                     }
                 }
             }

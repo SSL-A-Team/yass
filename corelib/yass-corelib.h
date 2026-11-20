@@ -173,6 +173,10 @@ typedef struct yass_DribblerCommand {
 
 typedef struct yass_RobotCommand {
   uint8_t id;
+  /**
+   * True if the command is valid for this frame. False otherwise.
+   */
+  bool active;
   struct yass_MotionCommand motion_command;
   enum yass_MotionCommandFrame motion_command_frame;
   struct yass_KickCommand kick_command;

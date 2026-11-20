@@ -119,6 +119,8 @@ cdef extern from *:
 
   cdef struct RobotCommand:
     uint8_t id;
+    # True if the command is valid for this frame. False otherwise.
+    bool active;
     MotionCommand motion_command;
     MotionCommandFrame motion_command_frame;
     KickCommand kick_command;

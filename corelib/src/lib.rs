@@ -138,6 +138,8 @@ pub struct KickCommand {
 #[derive(Clone, Copy, Default)]
 pub struct RobotCommand {
     pub id: u8,
+    /// True if the command is valid for this frame. False otherwise.
+    pub active: bool,
     pub motion_command: MotionCommand,
     pub motion_command_frame: MotionCommandFrame,
     pub kick_command: KickCommand,

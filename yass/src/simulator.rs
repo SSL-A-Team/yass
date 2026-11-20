@@ -38,6 +38,9 @@ impl Simulator {
         commands: &[RobotCommand; 16],
     ) {
         for command in commands {
+            if !command.active {
+                continue;
+            }
             match command.motion_command {
                 MotionCommand::Off => (),
                 MotionCommand::Velocity { x, y, theta } => self.physics.set_bot_velocity(

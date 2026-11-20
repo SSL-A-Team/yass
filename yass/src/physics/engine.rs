@@ -17,6 +17,8 @@ pub struct PhsyicsEngine {
     blue_robot_handles: Vec<RigidBodyHandle>,
     yellow_robot_dribbler_fixed_joint_handles: Vec<Option<ImpulseJointHandle>>,
     blue_robot_dribbler_fixed_joint_handles: Vec<Option<ImpulseJointHandle>>,
+    yellow_robot_is_kicking: Vec<bool>,
+    blue_robot_is_kicking: Vec<bool>,
 }
 
 impl PhsyicsEngine {
@@ -60,6 +62,8 @@ impl PhsyicsEngine {
                 None;
                 config.blue_team.robot_count as usize
             ],
+            yellow_robot_is_kicking: vec![false; config.yellow_team.robot_count as usize],
+            blue_robot_is_kicking: vec![false; config.blue_team.robot_count as usize],
         }
     }
 
@@ -412,15 +416,33 @@ impl PhsyicsEngine {
         bot_body.add_torque(Vector::new(0.0, 0.0, wrench.theta), true);
     }
 
+    fn set_is_kicking(&mut self, color: TeamColor, id: u8, is_kicking: bool) {
+        match color {
+            TeamColor::Yellow => {
+                if (id as usize) < self.yellow_robot_is_kicking.len() {
+                    self.yellow_robot_is_kicking[id as usize] = is_kicking;
+                }
+            }
+            TeamColor::Blue => {
+                if (id as usize) < self.blue_robot_is_kicking.len() {
+                    self.blue_robot_is_kicking[id as usize] = is_kicking;
+                }
+            }
+        }
+    }
+
     pub fn set_bot_kick(&mut self, color: TeamColor, id: u8, command: KickCommand) {
         if command.speed <= 0.0 {
+            self.set_is_kicking(color, id, false);
             return;
         }
         let Some(handle) = self.get_bot_handle(color, id) else {
+            self.set_is_kicking(color, id, false);
             return;
         };
         let bot_body = &self.phys_world.bodies[handle];
         if !self.get_ball_sense(bot_body) {
+            self.set_is_kicking(color, id, false);
             return;
         }
         let chip_angle = f32::max(command.angle, 0.0);
@@ -436,6 +458,16 @@ impl PhsyicsEngine {
         let impulse =
             kick_dir * ((desired_speed_along_kick - ball_speed_along_kick) * ball_body.mass());
         ball_body.apply_impulse(impulse, true);
+        self.set_is_kicking(color, id, true);
+        self.remove_dribbler_fixed_joint(color, id);
+    }
+
+    fn bot_has_dribbler_fixed_joint(&mut self, color: TeamColor, id: u8) -> bool {
+        let fixed_joint_handles = match color {
+            TeamColor::Blue => &mut self.blue_robot_dribbler_fixed_joint_handles,
+            TeamColor::Yellow => &mut self.yellow_robot_dribbler_fixed_joint_handles,
+        };
+        fixed_joint_handles[id as usize].is_some()
     }
 
     fn remove_dribbler_fixed_joint(&mut self, color: TeamColor, id: u8) {
@@ -458,25 +490,33 @@ impl PhsyicsEngine {
         let bot_position = bot_body.position().clone();
         let bot_rotation = bot_body.rotation().clone();
         if !self.get_ball_sense(bot_body) {
-            self.remove_dribbler_fixed_joint(color, id);
+            // self.remove_dribbler_fixed_joint(color, id);
             return;
         }
-        if let DribblerCommand::Sticky = command {
-            let ball_body = &mut self.phys_world.bodies[self.ball_handle];
-            let rel_pos = bot_position.inv_mul(ball_body.position());
-            let joint = FixedJointBuilder::new()
-                .local_frame1(rel_pos)
-                .local_frame2(Pose::identity())
-                .contacts_enabled(false);
-            let joint_handle =
-                self.phys_world
-                    .impulse_joints
-                    .insert(handle, self.ball_handle, joint, true);
-            let fixed_joint_handles = match color {
-                TeamColor::Blue => &mut self.blue_robot_dribbler_fixed_joint_handles,
-                TeamColor::Yellow => &mut self.yellow_robot_dribbler_fixed_joint_handles,
-            };
-            fixed_joint_handles[id as usize] = Some(joint_handle);
+        let is_kicking = match color {
+            TeamColor::Yellow => self.yellow_robot_is_kicking[id as usize],
+            TeamColor::Blue => self.blue_robot_is_kicking[id as usize],
+        };
+        if let DribblerCommand::Sticky = command
+            && !is_kicking
+        {
+            if !self.bot_has_dribbler_fixed_joint(color, id) {
+                let ball_body = &mut self.phys_world.bodies[self.ball_handle];
+                let rel_pos = bot_position.inv_mul(ball_body.position());
+                let joint = FixedJointBuilder::new()
+                    .local_frame1(rel_pos)
+                    .local_frame2(Pose::identity())
+                    .contacts_enabled(false);
+                let joint_handle =
+                    self.phys_world
+                        .impulse_joints
+                        .insert(handle, self.ball_handle, joint, true);
+                let fixed_joint_handles = match color {
+                    TeamColor::Blue => &mut self.blue_robot_dribbler_fixed_joint_handles,
+                    TeamColor::Yellow => &mut self.yellow_robot_dribbler_fixed_joint_handles,
+                };
+                fixed_joint_handles[id as usize] = Some(joint_handle);
+            }
         } else {
             self.remove_dribbler_fixed_joint(color, id);
         }

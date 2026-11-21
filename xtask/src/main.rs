@@ -10,13 +10,13 @@ const USAGE: &str = "\
 Usage: cargo xtask <command>
 
 Commands:
-  headers [OUT_DIR]  Generate corelib C, C++ and Cython headers
+  headers [OUT_DIR]  Generate corelib C and C++ headers
                      (default OUT_DIR: target/release/include)
   deb                Build the workspace in release mode, generate headers,
                      and package yass as a .deb";
 
 /// (cbindgen language name, header file extension)
-const HEADER_LANGUAGES: [(&str, &str); 3] = [("c", "h"), ("cxx", "hpp"), ("cython", "pxd")];
+const HEADER_LANGUAGES: [(&str, &str); 2] = [("c", "h"), ("cxx", "hpp")];
 
 fn main() -> ExitCode {
     let args: Vec<String> = env::args().skip(1).collect();

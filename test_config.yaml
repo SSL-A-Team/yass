@@ -1,0 +1,11 @@
+blue_team:
+  firmware:
+    lib: /home/matt/yass/examples/plugins/cpp/build/libexample_cxx_plugin.so
+    name: example_firmware
+yellow_team:
+  firmware:
+    lib: /home/matt/yass/examples/plugins/cpp/build/libexample_cxx_plugin.so
+    name: example_firmware
+vision_plugins:
+- lib: /home/matt/yass/examples/plugins/cpp/build/libexample_cxx_plugin.so
+  name: example_vision

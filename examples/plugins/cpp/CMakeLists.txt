@@ -6,5 +6,5 @@ add_library(example_cxx_plugin SHARED
 )
 
 target_include_directories(example_cxx_plugin PUBLIC 
-    include
+    "/usr/include/yass"
 )

@@ -41,6 +41,7 @@ impl Default for RobotConfig {
 
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 pub struct TeamConfig {
+    #[serde(default)]
     pub firmware: Option<PluginConfig>,
     #[serde(default)]
     pub robot_props: RobotConfig,
@@ -50,6 +51,16 @@ pub struct TeamConfig {
 
 fn default_robot_count() -> u8 {
     6
+}
+
+impl Default for TeamConfig {
+    fn default() -> Self {
+        Self {
+            firmware: None,
+            robot_props: RobotConfig::default(),
+            robot_count: default_robot_count(),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
@@ -120,8 +131,11 @@ pub struct Config {
     pub control: ControlConfig,
     #[serde(default)]
     pub field: FieldConfig,
+    #[serde(default)]
     pub blue_team: TeamConfig,
+    #[serde(default)]
     pub yellow_team: TeamConfig,
+    #[serde(default)]
     pub vision_plugins: Vec<PluginConfig>,
 }
 

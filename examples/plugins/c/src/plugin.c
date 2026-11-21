@@ -1,14 +1,15 @@
-#include "yass-corelib.h"
+#include "yass_corelib.h"
 #include <stdio.h>
 
-void run_firmware_frame(yass_SimulationState state, yass_TeamColor color, uint64_t delta_t_us, yass_RobotCommand commands_out[16])
-{
-    printf("run_firmware_frame from example C plugins\n");
-    commands_out[0].motion_command.tag = yass_MotionCommand_Velocity;
-    commands_out[0].motion_command.velocity.x = 0.1;
+void* yass_load_example_firmware(yass_TeamColor color, const char* config) {
+    printf("Example firmware loaded.\n");
+    return NULL;
 }
 
-void run_vision_frame(yass_SimulationState state)
-{
-    printf("run_vision_frame from example C plugins\n");
+void yass_run_example_firmware(yass_SimulationState state, uint64_t delta_t_us, void* user_data, yass_RobotCommand commands_out[16]) {
+    // Populate commands_out
+}
+
+void yass_unload_example_firmware(void* user_data) {
+    printf("Example firmware unloaded.\n");
 }

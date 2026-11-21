@@ -25,5 +25,8 @@ assets = [
     ["target/release/yass","usr/bin/","755"],
     ["target/release/yass_headless","usr/bin/","755"],
     ["target/release/yass_config_schema","usr/bin/","755"],
-    ["target/release/libyass_standard_plugins.so","usr/lib/yass/plugins/","644"]
+    ["target/release/libyass_standard_plugins.so","usr/lib/yass/plugins/","644"],
+    ["target/release/include/yass_corelib.h","usr/include/yass/","644"],
+    ["target/release/include/yass_corelib.hpp","usr/include/yass/","644"],
+    ["target/release/include/yass_corelib.pxd","usr/include/yass/","644"],
 ]

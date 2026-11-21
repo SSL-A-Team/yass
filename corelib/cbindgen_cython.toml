@@ -16,6 +16,10 @@ include = [
     "DribblerCommand",
     "RobotCommand"
 ]
+prefix = "yass_"
 
 [enum]
 prefix_with_name = true
+
+[cython]
+header = '"yass_corelib.h"'

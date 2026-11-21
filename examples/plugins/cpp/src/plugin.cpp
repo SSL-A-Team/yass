@@ -1,18 +1,19 @@
-#include "yass-corelib.hpp"
+#include "yass_corelib.hpp"
 #include <iostream>
 
 extern "C" {
 
-void run_firmware_frame(yass::SimulationState state, yass::TeamColor color, uint64_t delta_t_us, yass::RobotCommand commands_out[16])
-{
-    std::cout << "run_firmware_frame from example C++ plugins\n";
-    commands_out[0].motion_command.tag = yass::MotionCommand::Tag::Velocity;
-    commands_out[0].motion_command.velocity.x = 0.1;
+void* yass_load_example_firmware(yass::TeamColor color, const char* config) {
+    std::cout << "Example firmware loaded." << std::endl;
+    return nullptr;
 }
 
-void run_vision_frame(yass::SimulationState state)
-{
-    std::cout << "run_vision_frame from example C++ plugins\n";
+void yass_run_example_firmware(yass::SimulationState state, uint64_t delta_t_us, void* user_data, yass::RobotCommand commands_out[16]) {
+    // Populate commands_out
+}
+
+void yass_unload_example_firmware(void* user_data) {
+    std::cout << "Example firmware unloaded." << std::endl;
 }
 
 }

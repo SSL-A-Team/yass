@@ -32,4 +32,4 @@ jobs:
       if: ${{github.event_name == 'release'}}
       with:
         files: |
-          ${{github.workspace}}/target/release/yass_*.deb
+          ${{github.workspace}}/target/debian/yass_*.deb

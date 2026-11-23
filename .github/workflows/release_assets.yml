@@ -10,15 +10,20 @@ jobs:
     name: Build Assets
     runs-on: ubuntu-24.04
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+    - name: Checkout Repository
+      uses: actions/checkout@v4
 
-      - name: Build Installer
-        run: cargo xtask deb
+    - name: Install protoc
+      run: |
+        sudo apt update
+        sudo apt install protobuf-compiler
 
-      - name: Publish Assets
-        uses: softprops/action-gh-release@v2
-        if: ${{github.event_name == 'release'}}
-        with:
-          files: |
-            ${{github.workspace}}/target/release/yass_*.deb
+    - name: Build Installer
+      run: cargo xtask deb
+
+    - name: Publish Assets
+      uses: softprops/action-gh-release@v2
+      if: ${{github.event_name == 'release'}}
+      with:
+        files: |
+          ${{github.workspace}}/target/release/yass_*.deb

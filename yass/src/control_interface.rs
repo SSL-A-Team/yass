@@ -19,7 +19,7 @@ impl ControlInterface {
         socket.set_nonblocking(true)?;
         println!("Control listening on {0}", addr);
         Ok(Self {
-            socket: socket,
+            socket,
             recv_buffer: [0u8; 2048],
         })
     }

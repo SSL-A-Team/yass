@@ -7,9 +7,7 @@ use crate::league_proto::vision::{proto_helpers::*, vision_config::*};
 use prost::Message;
 use yass_corelib::*;
 
-use yass_league_protos::{
-    SslDetectionFrame, SslGeometryData, SslSource, SslWrapperPacket
-};
+use yass_league_protos::{SslDetectionFrame, SslGeometryData, SslSource, SslWrapperPacket};
 
 pub struct VisionPlugin {
     socket: UdpSocket,
@@ -30,10 +28,10 @@ impl VisionPlugin {
         if !config.address.is_multicast() {
             return Err(format!("{} is not a multicast address", config.address).into());
         }
-        if !(config.detection_rate_hz > 0.0) {
+        if config.detection_rate_hz <= 0.0 {
             return Err("detection_rate_hz must be positive".into());
         }
-        if !(config.geometry_period_s > 0.0) {
+        if config.geometry_period_s <= 0.0 {
             return Err("geometry_period_s must be positive".into());
         }
 

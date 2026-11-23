@@ -1,7 +1,9 @@
 use serde::de::DeserializeOwned;
 use std::ffi::{CStr, c_char};
 
-pub fn parse_config<ConfigType: Default + DeserializeOwned>(
+/// # Safety
+/// config_raw comes from FFI callbacks where yass is responsible for providing valid pointers
+pub unsafe fn parse_config<ConfigType: Default + DeserializeOwned>(
     config_raw: *const c_char,
 ) -> Result<ConfigType, Box<dyn std::error::Error>> {
     if config_raw.is_null() {

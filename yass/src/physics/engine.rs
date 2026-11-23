@@ -296,7 +296,7 @@ impl PhsyicsEngine {
             pose: VectorSE2 {
                 x: translation.x,
                 y: translation.y,
-                theta: theta,
+                theta,
             },
             id,
             present: true,
@@ -311,7 +311,7 @@ impl PhsyicsEngine {
                 y: 0.0,
                 theta: 0.0,
             },
-            ball_sense: self.get_ball_sense(&bot_body),
+            ball_sense: self.get_ball_sense(bot_body),
         }
     }
 
@@ -333,10 +333,11 @@ impl PhsyicsEngine {
 
     pub fn get_bot_state(&self, color: yass_corelib::TeamColor, id: u8) -> Robot {
         let Some(handle) = self.get_bot_handle(color, id) else {
-            let mut robot = Robot::default();
-            robot.id = id;
-            robot.present = false;
-            return robot;
+            return Robot {
+                id,
+                present: false,
+                ..Default::default()
+            };
         };
         self.get_bot_state_internal(id, handle)
     }
@@ -487,8 +488,8 @@ impl PhsyicsEngine {
             return;
         };
         let bot_body = &self.phys_world.bodies[handle];
-        let bot_position = bot_body.position().clone();
-        let bot_rotation = bot_body.rotation().clone();
+        let bot_position = *bot_body.position();
+        let bot_rotation = *bot_body.rotation();
         if !self.get_ball_sense(bot_body) {
             // self.remove_dribbler_fixed_joint(color, id);
             return;
@@ -547,13 +548,13 @@ impl PhsyicsEngine {
         vel_z: Option<f32>,
     ) {
         let ball_body = &mut self.phys_world.bodies[self.ball_handle];
-        let mut pos = ball_body.position().clone();
+        let mut pos = *ball_body.position();
         pos.translation.x = x.unwrap_or(pos.translation.x);
         pos.translation.y = y.unwrap_or(pos.translation.y);
         pos.translation.z = z.unwrap_or(pos.translation.z);
         ball_body.set_position(pos, true);
         let current_vel = ball_body.linvel();
-        let mut target_vel = current_vel.clone();
+        let mut target_vel = current_vel;
         target_vel.x = vel_x.unwrap_or(target_vel.x);
         target_vel.y = vel_y.unwrap_or(target_vel.y);
         target_vel.z = vel_z.unwrap_or(target_vel.z);
@@ -561,6 +562,7 @@ impl PhsyicsEngine {
         ball_body.apply_impulse(impulse, true);
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn teleport_robot(
         &mut self,
         color: TeamColor,
@@ -576,7 +578,7 @@ impl PhsyicsEngine {
             return;
         };
         let bot_body = &mut self.phys_world.bodies[handle];
-        let mut pos = bot_body.position().clone();
+        let mut pos = *bot_body.position();
         pos.translation.x = x.unwrap_or(pos.translation.x);
         pos.translation.y = y.unwrap_or(pos.translation.y);
         if let Some(t) = theta {
@@ -585,14 +587,14 @@ impl PhsyicsEngine {
         bot_body.set_position(pos, true);
 
         let current_vel = bot_body.linvel();
-        let mut target_vel = current_vel.clone();
+        let mut target_vel = current_vel;
         target_vel.x = vel_x.unwrap_or(target_vel.x);
         target_vel.y = vel_y.unwrap_or(target_vel.y);
         let impulse = bot_body.mass() * (target_vel - current_vel);
         bot_body.apply_impulse(impulse, true);
 
         let current_ang_vel = bot_body.angvel();
-        let mut target_ang_vel = current_ang_vel.clone();
+        let mut target_ang_vel = current_ang_vel;
         target_ang_vel.z = vel_theta.unwrap_or(target_ang_vel.z);
         let moment_of_inertia = bot_body
             .mass_properties()

@@ -12,7 +12,7 @@ impl Simulator {
     pub fn new(config: &Config) -> Self {
         Self {
             plugins: PluginManager::new(),
-            physics: PhsyicsEngine::new(&config),
+            physics: PhsyicsEngine::new(config),
         }
     }
 
@@ -81,6 +81,7 @@ impl Simulator {
         self.physics.teleport_ball(x, y, z, vel_x, vel_y, vel_z);
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn teleport_robot(
         &mut self,
         color: TeamColor,

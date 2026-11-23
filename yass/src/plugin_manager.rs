@@ -104,6 +104,12 @@ impl Drop for VisionPlugin {
     }
 }
 
+impl Default for PluginManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PluginManager {
     pub fn new() -> PluginManager {
         PluginManager {
@@ -204,10 +210,7 @@ fn resolve_libname(libname: &str) -> Result<String, Box<dyn std::error::Error>> 
     let exe_dir = exe_path
         .parent()
         .ok_or_else(|| {
-            std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "Could not determine executable path",
-            )
+            std::io::Error::other("Could not determine executable path")
         })?;
 
     let installed_default_plugins_dir = exe_dir.join("../lib/yass/plugins");
@@ -215,7 +218,7 @@ fn resolve_libname(libname: &str) -> Result<String, Box<dyn std::error::Error>> 
         let candidate_path = installed_default_plugins_dir.join(libname);
         if candidate_path.is_file() {
             let answer = candidate_path.to_str().ok_or_else(|| {
-                std::io::Error::new(std::io::ErrorKind::Other, "Could not resolve library")
+                std::io::Error::other("Could not resolve library")
             })?.to_owned();
             return Ok(answer);
         }

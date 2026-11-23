@@ -11,12 +11,14 @@ use vision_plugin::VisionPlugin;
 use yass_corelib::FieldDimensions;
 use yass_corelib::*;
 
+/// # Safety
+/// yass is responsible for calling this function with a valid config pointer
 #[unsafe(no_mangle)]
-pub extern "C" fn yass_load_league_proto_vision(
+pub unsafe extern "C" fn yass_load_league_proto_vision(
     field: FieldDimensions,
     config: *const c_char,
 ) -> *mut c_void {
-    let plugin = parse_config(config).and_then(|config| VisionPlugin::new(&field, config));
+    let plugin = unsafe { parse_config(config).and_then(|config| VisionPlugin::new(&field, config)) };
     match plugin {
         Ok(plugin) => {
             println!(

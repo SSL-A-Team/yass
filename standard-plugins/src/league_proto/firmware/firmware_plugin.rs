@@ -29,7 +29,7 @@ impl FirmwarePlugin {
         socket.set_nonblocking(true)?;
         println!("league_proto_firmware: listening on {addr}");
         Ok(Self {
-            config: config.clone(),
+            config,
             color,
             socket,
             recv_buffer: [0u8; 2048],
@@ -48,28 +48,28 @@ impl FirmwarePlugin {
                 for command in message.robot_commands {
                     let command_out = &mut commands_out[command.id as usize];
                     command_out.active = true;
-                    if let Some(robot_move_command) = command.move_command {
-                        if let Some(move_command) = robot_move_command.command {
-                            match move_command {
-                                Command::WheelVelocity(_) => {
-                                    eprintln!("Wheel velocities not yet supported.")
-                                }
-                                Command::LocalVelocity(move_local_velocity) => {
-                                    command_out.motion_command = MotionCommand::Velocity {
-                                        x: move_local_velocity.forward,
-                                        y: move_local_velocity.left,
-                                        theta: move_local_velocity.angular,
-                                    };
-                                    command_out.motion_command_frame = MotionCommandFrame::Local;
-                                }
-                                Command::GlobalVelocity(move_global_velocity) => {
-                                    command_out.motion_command = MotionCommand::Velocity {
-                                        x: move_global_velocity.x,
-                                        y: move_global_velocity.y,
-                                        theta: move_global_velocity.angular,
-                                    };
-                                    command_out.motion_command_frame = MotionCommandFrame::Global;
-                                }
+                    if let Some(robot_move_command) = command.move_command
+                        && let Some(move_command) = robot_move_command.command
+                    {
+                        match move_command {
+                            Command::WheelVelocity(_) => {
+                                eprintln!("Wheel velocities not yet supported.")
+                            }
+                            Command::LocalVelocity(move_local_velocity) => {
+                                command_out.motion_command = MotionCommand::Velocity {
+                                    x: move_local_velocity.forward,
+                                    y: move_local_velocity.left,
+                                    theta: move_local_velocity.angular,
+                                };
+                                command_out.motion_command_frame = MotionCommandFrame::Local;
+                            }
+                            Command::GlobalVelocity(move_global_velocity) => {
+                                command_out.motion_command = MotionCommand::Velocity {
+                                    x: move_global_velocity.x,
+                                    y: move_global_velocity.y,
+                                    theta: move_global_velocity.angular,
+                                };
+                                command_out.motion_command_frame = MotionCommandFrame::Global;
                             }
                         }
                     }
@@ -99,9 +99,11 @@ impl FirmwarePlugin {
                 if !robot.present {
                     continue;
                 }
-                let mut feedback = RobotFeedback::default();
-                feedback.id = robot.id as u32;
-                feedback.dribbler_ball_contact = Some(robot.ball_sense);
+                let feedback = RobotFeedback {
+                    id: robot.id as u32,
+                    dribbler_ball_contact: Some(robot.ball_sense),
+                    ..Default::default()
+                };
                 response.feedback.push(feedback);
             }
             response

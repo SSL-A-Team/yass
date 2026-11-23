@@ -75,11 +75,28 @@ fn generate_headers(out_dir: &Path) -> Result {
 fn build_deb() -> Result {
     cargo(&["build", "--release", "--workspace", "--exclude", "xtask"])?;
     generate_headers(&release_dir().join("include"))?;
+    ensure_cargo_deb()?;
     cargo(&["deb", "-p", "yass", "--no-build"])
 }
 
+fn ensure_cargo_deb() -> Result {
+    let installed = Command::new(cargo_bin())
+        .args(["deb", "--version"])
+        .output()
+        .is_ok_and(|output| output.status.success());
+    if !installed {
+        eprintln!("cargo-deb not found; installing it with `cargo install`");
+        cargo(&["install", "cargo-deb", "--locked"])?;
+    }
+    Ok(())
+}
+
+fn cargo_bin() -> String {
+    env::var("CARGO").unwrap_or_else(|_| "cargo".into())
+}
+
 fn cargo(args: &[&str]) -> Result {
-    let cargo = env::var("CARGO").unwrap_or_else(|_| "cargo".into());
+    let cargo = cargo_bin();
     let status = Command::new(&cargo)
         .args(args)
         .current_dir(workspace_root())

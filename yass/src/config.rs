@@ -109,6 +109,72 @@ impl From<&FieldConfig> for yass_corelib::FieldDimensions {
     }
 }
 
+/// Physical properties of the ball.
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
+#[serde(default)]
+pub struct BallConfig {
+    /// Ball radius (m).
+    pub radius: f32,
+    /// Ball mass (kg).
+    pub mass: f32,
+    /// Coefficient of restitution for ball collisions.
+    pub restitution: f32,
+    /// Constant deceleration magnitude while the ball slides (m/s^2).
+    pub sliding_deceleration: f32,
+    /// Constant deceleration magnitude while the ball rolls (m/s^2).
+    pub rolling_deceleration: f32,
+    /// Ratio of the speed at which sliding turns into rolling to the initial kick speed.
+    /// Must be in (0, 1). Theory for a solid sphere gives 5/7.
+    pub sliding_to_rolling_ratio: f32,
+}
+
+impl Default for BallConfig {
+    fn default() -> Self {
+        Self {
+            radius: 0.0213,
+            mass: 0.04593,
+            restitution: 0.65,
+            sliding_deceleration: 2.5,
+            rolling_deceleration: 0.3,
+            sliding_to_rolling_ratio: 0.6,
+        }
+    }
+}
+
+impl BallConfig {
+    pub fn validate(&self) -> Result<(), String> {
+        let positive = [("radius", self.radius), ("mass", self.mass)];
+        for (name, value) in positive {
+            if value.is_nan() || value <= 0.0 {
+                return Err(format!("ball.{name} must be positive, got {value}"));
+            }
+        }
+        let non_negative = [
+            ("restitution", self.restitution),
+            ("sliding_deceleration", self.sliding_deceleration),
+            ("rolling_deceleration", self.rolling_deceleration),
+        ];
+        for (name, value) in non_negative {
+            if value.is_nan() || value < 0.0 {
+                return Err(format!("ball.{name} must be non-negative, got {value}"));
+            }
+        }
+        if self.sliding_deceleration <= self.rolling_deceleration {
+            return Err(format!(
+                "ball.sliding_deceleration ({}) must be greater than ball.rolling_deceleration ({})",
+                self.sliding_deceleration, self.rolling_deceleration
+            ));
+        }
+        if !(self.sliding_to_rolling_ratio > 0.0 && self.sliding_to_rolling_ratio < 1.0) {
+            return Err(format!(
+                "ball.sliding_to_rolling_ratio must be in (0, 1), got {}",
+                self.sliding_to_rolling_ratio
+            ));
+        }
+        Ok(())
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(default)]
 pub struct ControlConfig {
@@ -132,6 +198,8 @@ pub struct Config {
     #[serde(default)]
     pub field: FieldConfig,
     #[serde(default)]
+    pub ball: BallConfig,
+    #[serde(default)]
     pub blue_team: TeamConfig,
     #[serde(default)]
     pub yellow_team: TeamConfig,
@@ -144,7 +212,9 @@ mod default_configs {
 }
 
 pub fn default_config_names() -> impl Iterator<Item = &'static str> {
-    default_configs::DEFAULT_CONFIGS.iter().map(|(name, _)| *name)
+    default_configs::DEFAULT_CONFIGS
+        .iter()
+        .map(|(name, _)| *name)
 }
 
 pub fn default_config_contents(name: &str) -> Option<&'static str> {
@@ -165,8 +235,13 @@ pub fn load_config(name_or_path: &str) -> Result<Config, Box<dyn std::error::Err
             )
         })?,
     };
-    Ok(serde_yaml::from_str(&contents)
-        .map_err(|e| format!("Failed to parse config '{name_or_path}': {e}"))?)
+    let config: Config = serde_yaml::from_str(&contents)
+        .map_err(|e| format!("Failed to parse config '{name_or_path}': {e}"))?;
+    config
+        .ball
+        .validate()
+        .map_err(|e| format!("Invalid config '{name_or_path}': {e}"))?;
+    Ok(config)
 }
 
 #[cfg(test)]
@@ -178,6 +253,41 @@ mod default_config_tests {
         assert!(default_config_names().next().is_some());
         for name in default_config_names() {
             load_config(name).unwrap_or_else(|e| panic!("Default config '{name}' failed: {e}"));
+        }
+    }
+
+    #[test]
+    fn ball_config_validation() {
+        assert!(BallConfig::default().validate().is_ok());
+        let invalid = [
+            BallConfig {
+                radius: 0.0,
+                ..Default::default()
+            },
+            BallConfig {
+                sliding_to_rolling_ratio: 1.0,
+                ..Default::default()
+            },
+            BallConfig {
+                sliding_to_rolling_ratio: 0.0,
+                ..Default::default()
+            },
+            BallConfig {
+                rolling_deceleration: 2.5,
+                sliding_deceleration: 2.5,
+                ..Default::default()
+            },
+            BallConfig {
+                rolling_deceleration: -0.1,
+                ..Default::default()
+            },
+            BallConfig {
+                mass: f32::NAN,
+                ..Default::default()
+            },
+        ];
+        for config in invalid {
+            assert!(config.validate().is_err(), "accepted {config:?}");
         }
     }
 }

@@ -1,6 +1,6 @@
 use crate::{
-    config::{Config, FieldConfig, RobotConfig},
-    physics::{constants, mesh},
+    config::{BallConfig, Config, FieldConfig, RobotConfig},
+    physics::mesh,
 };
 use rapier3d::{
     glamx::{EulerRot, Quat},
@@ -39,20 +39,73 @@ pub struct PhsyicsEngine {
     ball_acceleration: Vec3,
     yellow_robot_accelerations: [Vec3; 16],
     blue_robot_accelerations: [Vec3; 16],
+    ball_params: BallPhysicsParams,
+}
+
+const GRAVITY: f32 = 9.81;
+
+/// Rapier parameters derived from the two-phase ball model in [`BallConfig`].
+///
+/// - Sliding: a sliding sphere decelerates at `mu * g`, so the ball-ground friction coefficient
+///   is `sliding_deceleration / g`.
+/// - Sliding-to-rolling transition: the speed at which a ball kicked with no spin starts rolling
+///   depends on its moment of inertia `I = k * m * r^2` (without rolling resistance it is
+///   `v0 / (1 + k)`). The ball's inertia is chosen to put the transition at
+///   `sliding_to_rolling_ratio * v0`.
+/// - Rolling: Rapier has no rolling resistance, so a constant torque opposing the ball's spin is
+///   applied each step. While rolling without slipping, a torque `tau` decelerates the ball at
+///   `tau * r / (I + m * r^2)`.
+#[derive(Debug, Clone, Copy)]
+struct BallPhysicsParams {
+    radius: f32,
+    inertia: f32,
+    ground_friction: f32,
+    rolling_resistance_torque: f32,
+}
+
+impl BallPhysicsParams {
+    fn from_config(config: &BallConfig) -> Self {
+        let BallConfig {
+            radius,
+            mass,
+            sliding_deceleration,
+            rolling_deceleration,
+            sliding_to_rolling_ratio,
+            ..
+        } = *config;
+        // The rolling resistance torque also acts while sliding, slowing spin-up. Accounting for
+        // it, a ball kicked at v0 with no spin starts rolling at
+        //   v0 * (1 - q * a_slide / (a_slide - a_roll)),  where q = k / (1 + k),
+        // so solve that for the inertia factor k.
+        let q = (1.0 - sliding_to_rolling_ratio) * (sliding_deceleration - rolling_deceleration)
+            / sliding_deceleration;
+        let inertia_factor = q / (1.0 - q);
+        let inertia = inertia_factor * mass * radius * radius;
+        Self {
+            radius,
+            inertia,
+            ground_friction: sliding_deceleration / GRAVITY,
+            rolling_resistance_torque: rolling_deceleration * (inertia + mass * radius * radius)
+                / radius,
+        }
+    }
 }
 
 impl PhsyicsEngine {
     pub fn new(config: &Config) -> Self {
         let mut phys_world = PhysicsWorld::new();
-        phys_world.gravity = Vec3::Z * -9.81;
-        Self::add_field(&mut phys_world, &config.field);
-        let ball_handle = Self::add_ball(&mut phys_world);
+        phys_world.gravity = Vec3::Z * -GRAVITY;
+        phys_world.integration_parameters.length_unit = 0.1;
+        let ball_params = BallPhysicsParams::from_config(&config.ball);
+        Self::add_field(&mut phys_world, &config.field, &ball_params);
+        let ball_handle = Self::add_ball(&mut phys_world, &config.ball, &ball_params);
         let yellow_start_x = ((config.yellow_team.robot_count as f32 - 1.0) / 2.0) * 0.18;
         let yellow_robot_handles = (0..config.yellow_team.robot_count)
             .map(|i| {
                 Self::add_robot(
                     &mut phys_world,
                     &config.yellow_team.robot_props,
+                    config.ball.radius,
                     Vec3::new(1.0, (i as f32 * 0.18) - yellow_start_x, 0.0),
                     std::f32::consts::PI,
                 )
@@ -64,6 +117,7 @@ impl PhsyicsEngine {
                 Self::add_robot(
                     &mut phys_world,
                     &config.blue_team.robot_props,
+                    config.ball.radius,
                     Vec3::new(-1.0, (i as f32 * 0.18) - blue_start_x, 0.0),
                     0.0,
                 )
@@ -88,17 +142,47 @@ impl PhsyicsEngine {
             ball_acceleration: Vec3::default(),
             yellow_robot_accelerations: [Vec3::default(); 16],
             blue_robot_accelerations: [Vec3::default(); 16],
+            ball_params,
         }
     }
 
     pub fn run_frame(&mut self, delta_t: std::time::Duration) {
-        self.phys_world.integration_parameters.dt = delta_t.as_secs_f32();
+        let delta_t_f32 = delta_t.as_secs_f32();
+        self.phys_world.integration_parameters.dt = delta_t_f32;
         self.cache_velocities();
+        self.apply_ball_rolling_resistance(delta_t_f32);
         self.phys_world.step();
-        self.update_acceleration_tracking(delta_t);
+        self.update_acceleration_tracking(delta_t_f32);
+        // Rapier keeps user forces and torques until they are cleared explicitly. Commands are
+        // reapplied every frame, so clear them after each step.
+        for (_, body) in self.phys_world.bodies.iter_mut() {
+            body.reset_forces(false);
+            body.reset_torques(false);
+        }
     }
 
-    fn add_field(world: &mut PhysicsWorld, config: &FieldConfig) {
+    /// Applies a constant torque opposing the ball's horizontal spin while it is on the ground,
+    /// emulating rolling resistance (see [`BallPhysicsParams`]).
+    fn apply_ball_rolling_resistance(&mut self, dt: f32) {
+        let params = self.ball_params;
+        let ball_body = &mut self.phys_world.bodies[self.ball_handle];
+        // Only resist rolling while touching the ground (small tolerance for contact penetration).
+        if ball_body.translation().z > params.radius * 1.05 {
+            return;
+        }
+        let angvel = ball_body.angvel();
+        let spin = Vec3::new(angvel.x, angvel.y, 0.0);
+        let spin_rate = spin.length();
+        if spin_rate < 1e-6 {
+            return;
+        }
+        // Never apply more torque than is needed to stop the spin within this step.
+        let max_torque = params.inertia * spin_rate / dt;
+        let torque_magnitude = f32::min(params.rolling_resistance_torque, max_torque);
+        ball_body.add_torque(-spin / spin_rate * torque_magnitude, true);
+    }
+
+    fn add_field(world: &mut PhysicsWorld, config: &FieldConfig, ball_params: &BallPhysicsParams) {
         let field_length = config.length;
         let field_width = config.width;
         let boundary_width = config.boundary_width;
@@ -111,9 +195,14 @@ impl PhsyicsEngine {
         let world_width = field_width + (2.0 * boundary_width) + (2.0 * wall_thickness);
 
         // Ground
+        // The ball keeps Rapier's default friction so ball-robot and ball-wall contacts are
+        // unchanged; the ground uses the Multiply rule so the ball-ground coefficient comes out to
+        // exactly the calibrated value.
         world.insert_collider(
             ColliderBuilder::cuboid(world_length / 2.0, world_width / 2.0, 0.1 / 2.0)
-                .translation(Vec3::Z * -0.05),
+                .translation(Vec3::Z * -0.05)
+                .friction(ball_params.ground_friction / ColliderBuilder::default_friction())
+                .friction_combine_rule(CoefficientCombineRule::Multiply),
             None,
         );
         // Long walls
@@ -228,12 +317,22 @@ impl PhsyicsEngine {
         );
     }
 
-    fn add_ball(world: &mut PhysicsWorld) -> RigidBodyHandle {
+    fn add_ball(
+        world: &mut PhysicsWorld,
+        config: &BallConfig,
+        ball_params: &BallPhysicsParams,
+    ) -> RigidBodyHandle {
         let (ball_handle, _) = world.insert(
-            RigidBodyBuilder::dynamic(),
-            ColliderBuilder::ball(constants::BALL_RADIUS)
-                .mass(constants::BALL_MASS)
-                .restitution(constants::BALL_RESTITUTION),
+            RigidBodyBuilder::dynamic()
+                .translation(Vec3::Z * config.radius)
+                .ccd_enabled(true),
+            ColliderBuilder::ball(config.radius)
+                .mass_properties(MassProperties::new(
+                    Vec3::ZERO,
+                    config.mass,
+                    Vec3::splat(ball_params.inertia),
+                ))
+                .restitution(config.restitution),
         );
         ball_handle
     }
@@ -241,6 +340,7 @@ impl PhsyicsEngine {
     fn add_robot(
         world: &mut PhysicsWorld,
         robot_config: &RobotConfig,
+        ball_radius: f32,
         position: Vec3,
         heading: f32,
     ) -> RigidBodyHandle {
@@ -262,7 +362,7 @@ impl PhsyicsEngine {
         );
         let robot_radius = robot_config.radius;
         let mouth_width = robot_config.mouth_width;
-        let ball_sense_height = 1.1 * constants::BALL_RADIUS * 2.0;
+        let ball_sense_height = 1.1 * ball_radius * 2.0;
         world.insert_collider(
             ColliderBuilder::cuboid(0.001, mouth_width, ball_sense_height)
                 .sensor(true)
@@ -588,6 +688,7 @@ impl PhsyicsEngine {
         target_vel.z = vel_z.unwrap_or(target_vel.z);
         let impulse = ball_body.mass() * (target_vel - current_vel);
         ball_body.apply_impulse(impulse, true);
+        ball_body.set_angvel(Vec3::ZERO, true);
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -653,20 +754,19 @@ impl PhsyicsEngine {
         Vec3::new(velocity.x, velocity.y, angular_velocity.z)
     }
 
-    fn update_acceleration_tracking(&mut self, delta_t: std::time::Duration) {
-        let delta_t_f32 = delta_t.as_secs_f32();
+    fn update_acceleration_tracking(&mut self, delta_t: f32) {
         let ball_body = &self.phys_world.bodies[self.ball_handle];
         let new_ball_vel = ball_body.linvel();
         let new_yellow_bot_vels: [Vec3; 16] =
             std::array::from_fn(|id| self.get_bot_velocity(TeamColor::Yellow, id as u8));
         let new_blue_bot_vels: [Vec3; 16] =
             std::array::from_fn(|id| self.get_bot_velocity(TeamColor::Blue, id as u8));
-        self.ball_acceleration = (new_ball_vel - self.velocity_cache.ball_vel) / delta_t_f32;
+        self.ball_acceleration = (new_ball_vel - self.velocity_cache.ball_vel) / delta_t;
         self.yellow_robot_accelerations = std::array::from_fn(|id| {
-            (new_yellow_bot_vels[id] - self.velocity_cache.yellow_bot_vels[id]) / delta_t_f32
+            (new_yellow_bot_vels[id] - self.velocity_cache.yellow_bot_vels[id]) / delta_t
         });
         self.blue_robot_accelerations = std::array::from_fn(|id| {
-            (new_blue_bot_vels[id] - self.velocity_cache.blue_bot_vels[id]) / delta_t_f32
+            (new_blue_bot_vels[id] - self.velocity_cache.blue_bot_vels[id]) / delta_t
         });
     }
 }
@@ -684,6 +784,7 @@ mod tests {
         };
         Config {
             field: FieldConfig::default(),
+            ball: BallConfig::default(),
             blue_team: team.clone(),
             yellow_team: team,
             vision_plugins: vec![],
@@ -725,6 +826,182 @@ mod tests {
         assert!(
             (end.pose.theta - start.pose.theta).abs() < 0.05,
             "heading drifted"
+        );
+    }
+
+    struct KickSample {
+        t: f32,
+        speed: f32,
+        position: Vec3,
+    }
+
+    /// Places the ball on the ground at `start`, gives it `velocity` with no spin, and records the
+    /// ball's state every 1 ms step (the headless simulator's rate) for `duration` seconds.
+    fn simulate_kick(
+        config: &Config,
+        start: Vec3,
+        velocity: Vec3,
+        duration: f32,
+    ) -> Vec<KickSample> {
+        let mut engine = PhsyicsEngine::new(config);
+        engine.teleport_ball(
+            Some(start.x),
+            Some(start.y),
+            Some(config.ball.radius),
+            Some(velocity.x),
+            Some(velocity.y),
+            Some(0.0),
+        );
+        let dt = 0.001;
+        (1..=(duration / dt) as usize)
+            .map(|i| {
+                engine.run_frame(std::time::Duration::from_secs_f32(dt));
+                let ball = engine.get_ball_state();
+                let v = Vec3::new(ball.velocity.x, ball.velocity.y, 0.0);
+                KickSample {
+                    t: i as f32 * dt,
+                    speed: v.length(),
+                    position: Vec3::new(ball.position.x, ball.position.y, 0.0),
+                }
+            })
+            .collect()
+    }
+
+    fn speed_at(samples: &[KickSample], t: f32) -> f32 {
+        samples
+            .iter()
+            .min_by(|a, b| (a.t - t).abs().total_cmp(&(b.t - t).abs()))
+            .unwrap()
+            .speed
+    }
+
+    fn assert_close(name: &str, actual: f32, expected: f32, rel_tol: f32) {
+        assert!(
+            (actual - expected).abs() <= rel_tol * expected.abs(),
+            "{name}: expected {expected} (±{:.1}%), got {actual}",
+            rel_tol * 100.0
+        );
+    }
+
+    /// Checks a simulated kick against the two-phase ball model's closed-form predictions.
+    fn assert_follows_two_phase_model(config: &Config, start: Vec3, velocity: Vec3) {
+        let BallConfig {
+            sliding_deceleration: a_slide,
+            rolling_deceleration: a_roll,
+            sliding_to_rolling_ratio: c_switch,
+            ..
+        } = config.ball;
+        let v_shoot = velocity.length();
+        let v_switch = c_switch * v_shoot;
+        let t_switch = (v_shoot - v_switch) / a_slide;
+        let t_stop = t_switch + v_switch / a_roll;
+        let expected_distance = (v_shoot * v_shoot - v_switch * v_switch) / (2.0 * a_slide)
+            + (v_switch * v_switch) / (2.0 * a_roll);
+
+        let samples = simulate_kick(config, start, velocity, t_stop + 1.0);
+
+        // Sliding phase deceleration.
+        let (t0, t1) = (0.1 * t_switch, 0.9 * t_switch);
+        let measured_slide = (speed_at(&samples, t0) - speed_at(&samples, t1)) / (t1 - t0);
+        assert_close("sliding deceleration", measured_slide, a_slide, 0.02);
+
+        // Transition: the first step where deceleration falls below the midpoint of the phases.
+        let threshold = 0.5 * (a_slide + a_roll) * 0.001;
+        let switch_sample = samples
+            .windows(2)
+            .find(|w| w[0].speed - w[1].speed < threshold)
+            .map(|w| &w[1])
+            .expect("ball never left the sliding phase");
+        assert_close("switch speed", switch_sample.speed, v_switch, 0.02);
+        assert_close("switch time", switch_sample.t, t_switch, 0.05);
+
+        // Rolling phase deceleration.
+        let (t0, t1) = (t_switch + 0.5, t_stop - 0.5);
+        let measured_roll = (speed_at(&samples, t0) - speed_at(&samples, t1)) / (t1 - t0);
+        assert_close("rolling deceleration", measured_roll, a_roll, 0.03);
+
+        // The ball comes to rest at the predicted distance and stays there.
+        let last = samples.last().unwrap();
+        assert!(last.speed < 1e-3, "ball still moving: {} m/s", last.speed);
+        let distance = (last.position - start).length();
+        assert_close("stopping distance", distance, expected_distance, 0.03);
+        let resting = &samples[samples.len() - 500];
+        assert!(
+            (last.position - resting.position).length() < 1e-4,
+            "resting ball drifted"
+        );
+    }
+
+    #[test]
+    fn ball_follows_two_phase_model_with_default_config() {
+        // Example kick from the ER-Force 2016 TDP, Fig. 6.
+        let config = test_config();
+        assert_follows_two_phase_model(
+            &config,
+            Vec3::new(-4.5, 2.0, 0.0),
+            Vec3::new(3.3, 0.0, 0.0),
+        );
+    }
+
+    #[test]
+    fn ball_follows_two_phase_model_with_custom_config() {
+        let mut config = test_config();
+        config.ball.sliding_deceleration = 4.0;
+        config.ball.rolling_deceleration = 0.5;
+        config.ball.sliding_to_rolling_ratio = 5.0 / 7.0;
+        assert_follows_two_phase_model(
+            &config,
+            Vec3::new(-3.0, -2.0, 0.0),
+            Vec3::new(0.8, 0.6, 0.0) * 3.0,
+        );
+    }
+
+    #[test]
+    fn teleporting_ball_velocity_clears_spin() {
+        let config = test_config();
+        let mut engine = PhsyicsEngine::new(&config);
+        engine.teleport_ball(Some(0.0), Some(2.0), None, Some(2.0), Some(0.0), Some(0.0));
+        for _ in 0..1000 {
+            engine.run_frame(std::time::Duration::from_millis(1));
+        }
+        assert!(
+            engine.phys_world.bodies[engine.ball_handle]
+                .angvel()
+                .length()
+                > 1.0
+        );
+        engine.teleport_ball(None, None, None, Some(0.0), Some(0.0), Some(0.0));
+        assert_eq!(
+            engine.phys_world.bodies[engine.ball_handle].angvel(),
+            Vec3::ZERO
+        );
+    }
+
+    #[test]
+    fn wrench_applies_for_a_single_frame() {
+        let config = test_config();
+        let mut engine = PhsyicsEngine::new(&config);
+        let dt = std::time::Duration::from_millis(1);
+        engine.set_bot_wrench(
+            TeamColor::Blue,
+            0,
+            VectorSE2 {
+                x: 10.0,
+                y: 0.0,
+                theta: 0.0,
+            },
+            MotionCommandFrame::Global,
+        );
+        engine.run_frame(dt);
+        let speed_after_wrench = engine.get_bot_state(TeamColor::Blue, 0).velocity.x;
+        assert!(speed_after_wrench > 0.0);
+        for _ in 0..100 {
+            engine.run_frame(dt);
+        }
+        let speed_later = engine.get_bot_state(TeamColor::Blue, 0).velocity.x;
+        assert!(
+            speed_later <= speed_after_wrench + 1e-6,
+            "force persisted: {speed_after_wrench} -> {speed_later}"
         );
     }
 }

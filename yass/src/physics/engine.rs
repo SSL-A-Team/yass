@@ -10,6 +10,22 @@ use yass_corelib::{
     Ball, DribblerCommand, KickCommand, MotionCommandFrame, Robot, TeamColor, Vector3, VectorSE2,
 };
 
+struct VelocityCache {
+    ball_vel: Vec3,
+    yellow_bot_vels: [Vec3; 16],
+    blue_bot_vels: [Vec3; 16],
+}
+
+impl Default for VelocityCache {
+    fn default() -> Self {
+        Self {
+            ball_vel: Default::default(),
+            yellow_bot_vels: Default::default(),
+            blue_bot_vels: Default::default(),
+        }
+    }
+}
+
 pub struct PhsyicsEngine {
     phys_world: PhysicsWorld,
     ball_handle: RigidBodyHandle,
@@ -19,6 +35,10 @@ pub struct PhsyicsEngine {
     blue_robot_dribbler_fixed_joint_handles: Vec<Option<ImpulseJointHandle>>,
     yellow_robot_is_kicking: Vec<bool>,
     blue_robot_is_kicking: Vec<bool>,
+    velocity_cache: VelocityCache,
+    ball_acceleration: Vec3,
+    yellow_robot_accelerations: [Vec3; 16],
+    blue_robot_accelerations: [Vec3; 16],
 }
 
 impl PhsyicsEngine {
@@ -64,12 +84,18 @@ impl PhsyicsEngine {
             ],
             yellow_robot_is_kicking: vec![false; config.yellow_team.robot_count as usize],
             blue_robot_is_kicking: vec![false; config.blue_team.robot_count as usize],
+            velocity_cache: VelocityCache::default(),
+            ball_acceleration: Vec3::default(),
+            yellow_robot_accelerations: [Vec3::default(); 16],
+            blue_robot_accelerations: [Vec3::default(); 16],
         }
     }
 
     pub fn run_frame(&mut self, delta_t: std::time::Duration) {
         self.phys_world.integration_parameters.dt = delta_t.as_secs_f32();
+        self.cache_velocities();
         self.phys_world.step();
+        self.update_acceleration_tracking(delta_t);
     }
 
     fn add_field(world: &mut PhysicsWorld, config: &FieldConfig) {
@@ -83,7 +109,7 @@ impl PhsyicsEngine {
         let wall_thickness = 0.02;
         let world_length = field_length + (2.0 * boundary_width) + (2.0 * wall_thickness);
         let world_width = field_width + (2.0 * boundary_width) + (2.0 * wall_thickness);
-        // Note: cuboid() takes half-extents.
+
         // Ground
         world.insert_collider(
             ColliderBuilder::cuboid(world_length / 2.0, world_width / 2.0, 0.1 / 2.0)
@@ -265,11 +291,10 @@ impl PhsyicsEngine {
                 y: velocity.y,
                 z: velocity.z,
             },
-            // TODO: rapier doesn't let you query acceleration
             acceleration: Vector3 {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
+                x: self.ball_acceleration.x,
+                y: self.ball_acceleration.y,
+                z: self.ball_acceleration.z,
             },
         }
     }
@@ -285,13 +310,17 @@ impl PhsyicsEngine {
         Some(handles[id as usize])
     }
 
-    fn get_bot_state_internal(&self, id: u8, handle: RigidBodyHandle) -> Robot {
+    fn get_bot_state_internal(&self, color: TeamColor, id: u8, handle: RigidBodyHandle) -> Robot {
         let bot_body = &self.phys_world.bodies[handle];
         let translation = &bot_body.translation();
         let rotation = &bot_body.rotation();
         let (theta, _, _) = rotation.to_euler(glamx::EulerRot::ZXY);
         let velocity = &bot_body.linvel();
         let angular_velocity = &bot_body.angvel();
+        let acceleration = match color {
+            TeamColor::Yellow => self.yellow_robot_accelerations[id as usize],
+            TeamColor::Blue => self.blue_robot_accelerations[id as usize],
+        };
         Robot {
             pose: VectorSE2 {
                 x: translation.x,
@@ -305,11 +334,10 @@ impl PhsyicsEngine {
                 y: velocity.y,
                 theta: angular_velocity.z,
             },
-            // TODO: rapier doesn't let you query acceleration
             acceleration: VectorSE2 {
-                x: 0.0,
-                y: 0.0,
-                theta: 0.0,
+                x: acceleration.x,
+                y: acceleration.y,
+                theta: acceleration.z,
             },
             ball_sense: self.get_ball_sense(bot_body),
         }
@@ -331,7 +359,7 @@ impl PhsyicsEngine {
         false
     }
 
-    pub fn get_bot_state(&self, color: yass_corelib::TeamColor, id: u8) -> Robot {
+    pub fn get_bot_state(&self, color: TeamColor, id: u8) -> Robot {
         let Some(handle) = self.get_bot_handle(color, id) else {
             return Robot {
                 id,
@@ -339,7 +367,7 @@ impl PhsyicsEngine {
                 ..Default::default()
             };
         };
-        self.get_bot_state_internal(id, handle)
+        self.get_bot_state_internal(color, id, handle)
     }
 
     pub fn set_bot_velocity(
@@ -604,6 +632,42 @@ impl PhsyicsEngine {
             .z;
         let ang_impulse = moment_of_inertia * (target_ang_vel - current_ang_vel);
         bot_body.apply_torque_impulse(ang_impulse, true);
+    }
+
+    fn cache_velocities(&mut self) {
+        let ball_body = &self.phys_world.bodies[self.ball_handle];
+        self.velocity_cache.ball_vel = ball_body.linvel();
+        self.velocity_cache.yellow_bot_vels =
+            std::array::from_fn(|id| self.get_bot_velocity(TeamColor::Yellow, id as u8));
+        self.velocity_cache.blue_bot_vels =
+            std::array::from_fn(|id| self.get_bot_velocity(TeamColor::Blue, id as u8));
+    }
+
+    fn get_bot_velocity(&self, color: TeamColor, id: u8) -> Vec3 {
+        let Some(handle) = self.get_bot_handle(color, id) else {
+            return Vec3::default();
+        };
+        let bot_body = &self.phys_world.bodies[handle];
+        let velocity = &bot_body.linvel();
+        let angular_velocity = &bot_body.angvel();
+        Vec3::new(velocity.x, velocity.y, angular_velocity.z)
+    }
+
+    fn update_acceleration_tracking(&mut self, delta_t: std::time::Duration) {
+        let delta_t_f32 = delta_t.as_secs_f32();
+        let ball_body = &self.phys_world.bodies[self.ball_handle];
+        let new_ball_vel = ball_body.linvel();
+        let new_yellow_bot_vels: [Vec3; 16] =
+            std::array::from_fn(|id| self.get_bot_velocity(TeamColor::Yellow, id as u8));
+        let new_blue_bot_vels: [Vec3; 16] =
+            std::array::from_fn(|id| self.get_bot_velocity(TeamColor::Blue, id as u8));
+        self.ball_acceleration = (new_ball_vel - self.velocity_cache.ball_vel) / delta_t_f32;
+        self.yellow_robot_accelerations = std::array::from_fn(|id| {
+            (new_yellow_bot_vels[id] - self.velocity_cache.yellow_bot_vels[id]) / delta_t_f32
+        });
+        self.blue_robot_accelerations = std::array::from_fn(|id| {
+            (new_blue_bot_vels[id] - self.velocity_cache.blue_bot_vels[id]) / delta_t_f32
+        });
     }
 }
 

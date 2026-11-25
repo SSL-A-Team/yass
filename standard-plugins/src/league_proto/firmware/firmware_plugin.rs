@@ -1,5 +1,5 @@
 use yass_league_protos::{
-    RobotControl, RobotControlResponse, RobotFeedback, robot_move_command::Command,
+    RobotControl, RobotControlResponse, RobotFeedback, SimulatorError, robot_move_command::Command,
 };
 
 use crate::league_proto::firmware::firmware_config::FirmwareConfig;
@@ -11,12 +11,16 @@ use std::{
 use yass_corelib::{
     DribblerCommand, MotionCommand, MotionCommandFrame, RobotCommand, SimulationState, TeamColor,
 };
+
+const MAX_CONTROL_PACKET_SIZE: usize = 700;
+const MAX_RESPONSE_PACKET_SIZE: usize = 3072;
+
 pub struct FirmwarePlugin {
     config: FirmwareConfig,
     color: TeamColor,
     socket: UdpSocket,
-    recv_buffer: [u8; 2048], // TODO(mbarulic): determine true max-needed size
-    send_buffer: [u8; 2048], // TODO(mbarulic): determine true max-needed size
+    recv_buffer: [u8; MAX_CONTROL_PACKET_SIZE],
+    send_buffer: [u8; MAX_RESPONSE_PACKET_SIZE],
 }
 
 impl FirmwarePlugin {
@@ -32,8 +36,8 @@ impl FirmwarePlugin {
             config,
             color,
             socket,
-            recv_buffer: [0u8; 2048],
-            send_buffer: [0u8; 2048],
+            recv_buffer: [0u8; MAX_CONTROL_PACKET_SIZE],
+            send_buffer: [0u8; MAX_RESPONSE_PACKET_SIZE],
         })
     }
 
@@ -44,6 +48,7 @@ impl FirmwarePlugin {
         commands_out: &mut [RobotCommand; 16],
     ) {
         if let Ok(Some((bytes_read, sender))) = self.get_newest_command_packet() {
+            let mut response = RobotControlResponse::default();
             if let Ok(message) = RobotControl::decode(&self.recv_buffer[..bytes_read]) {
                 for command in message.robot_commands {
                     let command_out = &mut commands_out[command.id as usize];
@@ -53,7 +58,11 @@ impl FirmwarePlugin {
                     {
                         match move_command {
                             Command::WheelVelocity(_) => {
-                                eprintln!("Wheel velocities not yet supported.")
+                                eprintln!("Wheel velocities not yet supported.");
+                                response.errors.push(SimulatorError{
+                                    code: Some("BadRequest".to_string()),
+                                    message: Some("Wheel velocities not yet supported.".to_string()),
+                                });
                             }
                             Command::LocalVelocity(move_local_velocity) => {
                                 command_out.motion_command = MotionCommand::Velocity {
@@ -90,7 +99,6 @@ impl FirmwarePlugin {
                     }
                 }
             }
-            let mut response = RobotControlResponse::default();
             let sim_bots = match self.color {
                 TeamColor::Blue => &state.blue_robots,
                 TeamColor::Yellow => &state.yellow_robots,

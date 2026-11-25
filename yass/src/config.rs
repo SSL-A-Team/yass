@@ -34,7 +34,7 @@ impl Default for RobotConfig {
             radius: 0.09,
             height: 0.18,
             mouth_width: 0.08,
-            mass: 1.0, // TODO: what's a reasonable default for this?
+            mass: 2.6,
         }
     }
 }

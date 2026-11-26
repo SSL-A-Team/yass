@@ -1,15 +1,24 @@
+mod rendering;
+
+use std::{
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
+        mpsc,
+    },
+    thread,
+    time::{Duration, Instant},
+};
+
 use clap::Parser;
-use std::error::Error;
-use std::net::SocketAddrV4;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::thread;
-use std::time::{Duration, Instant};
-use yass::config::load_config;
-use yass::control_interface::ControlInterface;
-use yass::simulator::Simulator;
-use yass::{init_commands, reset_commands};
 use kiss3d::prelude::*;
+use yass::{
+    common_setup::CommonSetup,
+    config::{Config, load_config},
+};
+use yass_corelib::SimulationState;
+
+use crate::rendering::Renderer;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about = "A RoboCup SSL Simulator")]
@@ -18,77 +27,99 @@ struct Args {
     #[arg(short = 'c', long, default_value = "div_b")]
     config: String,
 }
-
-fn main() -> Result<(), Box<dyn Error>> {
+#[kiss3d::main]
+async fn main() {
     let args = Args::parse();
 
-    let config = load_config(&args.config)?;
+    let config = match load_config(&args.config) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Failed to load config: {e}");
+            return;
+        }
+    };
 
-    let mut simulator = Simulator::new(&config);
-    let mut control_interface =
-        ControlInterface::new(SocketAddrV4::new(config.control.ip, config.control.port))?;
+    let shared_state = Arc::new(Mutex::new(SimulationState::default()));
 
-    if let Some(blue_firmware) = config.blue_team.firmware.as_ref() {
-        simulator.plugins.load_firmware_plugin(
-            &blue_firmware.lib,
-            blue_firmware.name.clone(),
-            yass_corelib::TeamColor::Blue,
-            serde_yaml::to_string(blue_firmware)?,
-        )?;
-    }
-    if let Some(yellow_firmware) = config.yellow_team.firmware.as_ref() {
-        simulator.plugins.load_firmware_plugin(
-            &yellow_firmware.lib,
-            yellow_firmware.name.clone(),
-            yass_corelib::TeamColor::Yellow,
-            serde_yaml::to_string(yellow_firmware)?,
-        )?;
-    }
-    for vision_plugin_config in config.vision_plugins.iter() {
-        simulator.plugins.load_vision_plugin(
-            &vision_plugin_config.lib,
-            vision_plugin_config.name.clone(),
-            (&config.field).into(),
-            serde_yaml::to_string(vision_plugin_config)?,
-        )?;
-    }
-
-    let mut blue_commands = init_commands();
-    let mut yellow_commands = init_commands();
+    let (err_tx, err_rx) = mpsc::channel();
+    let (ready_tx, ready_rx) = mpsc::channel();
 
     let running = Arc::new(AtomicBool::new(true));
-    let r = running.clone();
-    ctrlc::set_handler(move || {
-        r.store(false, Ordering::SeqCst);
-    })
-    .expect("Error setting Ctrl-C handler");
 
+    let thread_config = config.clone();
+    let thread_shared_state = shared_state.clone();
+    let thread_running = running.clone();
+    let sim_thread_handle = thread::spawn(move || {
+        let res = sim_thread_run(thread_config, thread_running, ready_tx, thread_shared_state);
+        if let Err(send_err) = err_tx.send(res.map_err(|e| format!("{e}"))) {
+            eprintln!("Failed to send simulation thread error: {send_err}");
+        }
+    });
+
+    if let Ok(Err(e)) = ready_rx.recv() {
+        eprintln!("Failed to initialize simulator: {e}");
+        return;
+    }
+
+    if let Ok(Err(e)) = err_rx.try_recv() {
+        eprintln!("Failed to initialize simulator: {e}");
+        return;
+    }
+
+    let mut window = Window::new("yass").await;
+    window.set_background_color(LIGHT_SKY_BLUE);
+    let mut camera = OrbitCamera3d::default();
+    camera.set_up_axis(Vec3::Z);
+    camera.set_pitch((55.0 as f32).to_radians());
+    camera.set_yaw((90.0 as f32).to_radians());
+    camera.set_dist(12.0);
+    let mut scene = SceneNode3d::empty();
+
+    let mut renderer = Renderer::new(&mut scene, &config);
+
+    while window.render_3d(&mut scene, &mut camera).await {
+        if let Ok(Err(sim_err)) = err_rx.try_recv() {
+            eprintln!("Error from simulation thread: {sim_err}");
+            break;
+        }
+        let s = *shared_state.lock().unwrap();
+
+        renderer.update(&mut scene, s);
+    }
+
+    running.store(false, Ordering::Relaxed);
+    if let Err(_) = sim_thread_handle.join() {
+        eprintln!("Failed to finish simulation thread.");
+    }
+}
+
+fn sim_thread_run(
+    config: Config,
+    running: Arc<AtomicBool>,
+    ready_tx: mpsc::Sender<Result<(), String>>,
+    shared_state: Arc<Mutex<SimulationState>>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut sim = match CommonSetup::new(config) {
+        Ok(s) => s,
+        Err(e) => {
+            ready_tx.send(Err(e.to_string()))?;
+            return Err(e);
+        }
+    };
     let frame_duration = Duration::from_millis(1);
-    let delta_t_us = frame_duration.as_micros() as u64;
-
-    simulator.plugins.print_plugin_info();
-
-    while running.load(Ordering::SeqCst) {
+    sim.simulator.plugins.print_plugin_info();
+    ready_tx.send(Ok(()))?;
+    loop {
+        if !running.load(Ordering::Relaxed) {
+            break;
+        }
         let start = Instant::now();
-        control_interface.run(&mut simulator)?;
-        let state = simulator.get_state();
-        simulator.plugins.run_vision_plugins(state);
-        reset_commands(&mut blue_commands);
-        reset_commands(&mut yellow_commands);
-        simulator
-            .plugins
-            .run_blue_firmware(state, delta_t_us, &mut blue_commands);
-        simulator
-            .plugins
-            .run_yellow_firmware(state, delta_t_us, &mut yellow_commands);
-        simulator.apply_robot_commands(yass_corelib::TeamColor::Blue, &blue_commands);
-        simulator.apply_robot_commands(yass_corelib::TeamColor::Yellow, &yellow_commands);
-        simulator.run_frame(frame_duration);
+        sim.step(frame_duration)?;
+        *shared_state.lock().unwrap() = sim.simulator.get_state();
         let elapsed = start.elapsed();
         if let Some(remaining) = frame_duration.checked_sub(elapsed) {
             thread::sleep(remaining);
         }
     }
-
     Ok(())
 }

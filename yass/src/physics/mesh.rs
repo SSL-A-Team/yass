@@ -15,7 +15,7 @@ fn generate_robot_footprint_vertices(
     z: f32,
 ) {
     let start = f32::asin((mouth_width / 2.0) / radius);
-    let end = f32::two_pi() - start;
+    let end = (2.0 * std::f32::consts::PI) - start;
     let num_points = 100;
     let step = (end - start) / (num_points as f32);
     for angle in (0..=num_points).map(|i| start + (i as f32) * step) {

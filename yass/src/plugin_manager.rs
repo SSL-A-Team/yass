@@ -173,12 +173,12 @@ impl PluginManager {
     pub fn run_blue_firmware(
         &self,
         state: yass_corelib::SimulationState,
-        delta_t_us: u64,
+        frame_duration: std::time::Duration,
         commands: &mut [RobotCommand; 16],
     ) {
         if let Some(plugin) = self.blue_firmware_plugin.as_ref() {
             unsafe {
-                plugin.frame.deref()(state, delta_t_us, plugin.user_data, commands);
+                plugin.frame.deref()(state, frame_duration.as_micros() as u64, plugin.user_data, commands);
             }
         }
     }
@@ -186,12 +186,12 @@ impl PluginManager {
     pub fn run_yellow_firmware(
         &self,
         state: yass_corelib::SimulationState,
-        delta_t_us: u64,
+        frame_duration: std::time::Duration,
         commands: &mut [RobotCommand; 16],
     ) {
         if let Some(plugin) = self.yellow_firmware_plugin.as_ref() {
             unsafe {
-                plugin.frame.deref()(state, delta_t_us, plugin.user_data, commands);
+                plugin.frame.deref()(state, frame_duration.as_micros() as u64, plugin.user_data, commands);
             }
         }
     }

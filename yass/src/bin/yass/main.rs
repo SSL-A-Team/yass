@@ -1,4 +1,5 @@
 mod color;
+mod labels;
 mod rendering;
 
 use std::{
@@ -19,7 +20,7 @@ use yass::{
 };
 use yass_corelib::SimulationState;
 
-use crate::{color::srgb_to_linear, rendering::Renderer};
+use crate::{color::srgb_to_linear, labels::draw_robot_id_labels, rendering::Renderer};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about = "A RoboCup SSL Simulator")]
@@ -74,6 +75,7 @@ async fn main() {
     }
 
     let mut is_dark_mode = false;
+    let mut show_labels = false;
     let default_dist = DIST_FACTOR * config.field.length;
     let mut window = Window::new("yass").await;
     let mut camera = OrbitCamera3d::default();
@@ -113,13 +115,22 @@ async fn main() {
                                 }
                             });
 
-                            let dark_mode_btn_text = if is_dark_mode {
-                                "Light Mode"
-                            } else {
-                                "Dark Mode"
-                            };
-                            if ui.button(dark_mode_btn_text).clicked() {
+                            if ui
+                                .button(if is_dark_mode {
+                                    "Light Mode"
+                                } else {
+                                    "Dark Mode"
+                                })
+                                .clicked()
+                            {
                                 is_dark_mode = !is_dark_mode;
+                            }
+
+                            if ui
+                                .button(if show_labels { "Hide IDs" } else { "Show IDs" })
+                                .clicked()
+                            {
+                                show_labels = !show_labels;
                             }
                         });
                     });
@@ -139,6 +150,10 @@ async fn main() {
         let s = *shared_state.lock().unwrap();
 
         renderer.update(s);
+
+        if show_labels {
+            draw_robot_id_labels(&mut window, &camera, s);
+        }
     }
 
     running.store(false, Ordering::Relaxed);
